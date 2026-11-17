@@ -124,6 +124,7 @@ p { margin: 0; }
 .swipe.dragging > .hist { transition: none; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 7; background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 12px 10px 16px; display: flex; gap: 12px; align-items: center; box-shadow: 0 6px 24px rgb(0 0 0 / .25); max-width: calc(100vw - 32px); }
 .toast span { white-space: nowrap; }
+.upd { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 57px); z-index: 4; background: var(--accent-soft); border-bottom: 1px solid var(--line); padding: 8px 16px; display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 14px; }
 .toast button { background: none; border: 0; color: var(--accent-soft); font-weight: 700; cursor: pointer; padding: 6px 8px; }
 @media (prefers-reduced-motion: reduce) { .swipe > .hist { transition: none; } }
 .status { font-size: 14px; color: var(--muted); }
@@ -179,6 +180,7 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
     <button class="avatar" id="btnCuenta" type="button" aria-label="Cuenta y ajustes" hidden></button>
   </div>
 </header>
+<div class="upd" id="updBar" role="status" hidden>Hay una versión nueva de la app <button class="btn small primary" type="button" data-actualizar>Actualizar</button></div>
 
 <!-- ENTRADA -->
 <div class="login" id="login" hidden>
@@ -376,6 +378,12 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
         <button class="btn small" type="submit">Cambiar</button>
       </form>
       <p class="status" id="claveStatus" aria-live="polite"></p>
+    </div>
+
+    <div class="blk">
+      <h3>App</h3>
+      <p class="muted">Si no ves un cambio reciente, forzá la descarga de la última versión.</p>
+      <div class="row"><button class="btn small" type="button" data-actualizar>Actualizar la app</button></div>
     </div>
 
     <div class="blk">
@@ -1161,6 +1169,33 @@ $("btnImport").onclick = async () => {
   if (errores.length) status("dataStatus", "Hubo errores: " + errores.join(" · "), true);
   else { status("dataStatus", `Importé ${nuevosMeds.length} medicamentos, ${nuevasCons.length} consultas y ${nuevasCompras.length} compras.`); $("impTxt").value = ""; }
 };
+
+// ---------- Actualizar la app ----------
+// GitHub Pages deja el código en caché unos minutos. "Actualizar" lo baja de nuevo sin caché y recarga.
+const ARCHIVOS_APP = [location.pathname, "./config.js"];
+async function actualizarApp() {
+  document.querySelectorAll("[data-actualizar]").forEach((b) => { b.disabled = true; b.textContent = "Actualizando…"; });
+  await Promise.all(ARCHIVOS_APP.map((u) => fetch(u, { cache: "reload" }).catch(() => {})));
+  location.reload();
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-actualizar]")) actualizarApp(); });
+// Aviso automático: compara lo que tiene el navegador en caché con lo publicado.
+let ultimoChequeo = 0;
+async function buscarVersionNueva() {
+  if (Date.now() - ultimoChequeo < 5 * 60 * 1000) return;
+  ultimoChequeo = Date.now();
+  try {
+    for (const u of ARCHIVOS_APP) {
+      const [local, publicado] = await Promise.all([
+        fetch(u, { cache: "force-cache" }).then((r) => r.text()),
+        fetch(u, { cache: "no-store" }).then((r) => r.text()),
+      ]);
+      if (local !== publicado) { $("updBar").hidden = false; return; }
+    }
+  } catch { /* sin conexión: se reintenta más tarde */ }
+}
+setTimeout(buscarVersionNueva, 3000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") buscarVersionNueva(); });
 </script>
 </body>
 </html>
