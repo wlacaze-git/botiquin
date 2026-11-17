@@ -116,17 +116,19 @@ p { margin: 0; }
 .hist summary .what { font-weight: 500; overflow-wrap: anywhere; }
 .hist .answer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .hist .row { margin-top: 8px; }
-/* Deslizar a la derecha para borrar una consulta */
-.swipe { position: relative; border-radius: 14px; overflow: hidden; }
-.swipe-bg { position: absolute; inset: 0; background: var(--bad); color: #fff; display: flex; align-items: center; gap: 8px; padding-left: 18px; font-weight: 700; opacity: .55; transition: opacity .15s; }
-.swipe.armed .swipe-bg { opacity: 1; }
-.swipe > .hist { position: relative; touch-action: pan-y; transition: transform .2s ease; }
-.swipe.dragging > .hist { transition: none; }
+/* Menú de acciones de una consulta (mantener apretado) */
+.hist summary { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.hist .acciones { display: flex; justify-content: flex-end; margin-top: 8px; }
+.sheet { position: fixed; inset: 0; z-index: 8; background: rgb(0 0 0 / .4); display: flex; align-items: flex-end; justify-content: center; }
+.sheet-card { width: min(520px, 100%); background: var(--surface); border-radius: 16px 16px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; }
+.sheet-card p { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.sheet-card .btn { width: 100%; padding: 13px; }
+.btn.danger-fill { background: var(--bad); border-color: var(--bad); color: #fff; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 7; background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 12px 10px 16px; display: flex; gap: 12px; align-items: center; box-shadow: 0 6px 24px rgb(0 0 0 / .25); max-width: calc(100vw - 32px); }
 .toast span { white-space: nowrap; }
 .upd { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 57px); z-index: 4; background: var(--accent-soft); border-bottom: 1px solid var(--line); padding: 8px 16px; display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 14px; }
 .toast button { background: none; border: 0; color: var(--accent-soft); font-weight: 700; cursor: pointer; padding: 6px 8px; }
-@media (prefers-reduced-motion: reduce) { .swipe > .hist { transition: none; } }
+
 .status { font-size: 14px; color: var(--muted); }
 .status.bad { color: var(--bad); }
 .empty { text-align: center; padding: 28px 14px; color: var(--muted); display: grid; gap: 6px; }
@@ -274,8 +276,15 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
     <p class="muted">Esto es orientación, no un diagnóstico. Ante síntomas intensos, que empeoran o no se te van, consultá a un médico o farmacéutico. Emergencias: 112.</p>
     <h3 style="margin-top:10px">Consultas anteriores</h3>
     <p class="muted" id="histHint">Acá van a quedar guardadas tus consultas para que las puedas volver a ver. Solo las ves vos, aunque compartas el botiquín.</p>
-    <p class="muted" id="histSwipe" hidden>Deslizá una consulta hacia la derecha para borrarla.</p>
+    <p class="muted" id="histSwipe" hidden>Mantené apretada una consulta para borrarla.</p>
     <div class="list" id="hist"></div>
+    <div class="sheet" id="sheet" hidden>
+      <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheetTit">
+        <p id="sheetTit"></p>
+        <button class="btn danger-fill" type="button" id="sheetBorrar">Borrar consulta</button>
+        <button class="btn" type="button" id="sheetCancelar">Cancelar</button>
+      </div>
+    </div>
     <div class="toast" id="toast" role="status" hidden><span id="toastTxt"></span><button type="button" id="toastBtn">Deshacer</button></div>
   </section>
 
@@ -918,15 +927,12 @@ $("btnAsk").onclick = async () => {
 function renderHist() {
   $("histHint").hidden = hist.length > 0;
   $("histSwipe").hidden = hist.length === 0;
-  $("hist").innerHTML = hist.map((h) => `<div class="swipe" data-hid="${esc(h.id)}">
-    <div class="swipe-bg" aria-hidden="true">🗑 Borrar</div>
-    <details class="card hist">
-      <summary><span class="when">${esc(fmtWhen(h.fecha))}</span><span class="what">${esc(h.sintoma)}${h.con_foto ? " 📷" : ""}</span></summary>
-      <div class="answer">${md(h.respuesta || "")}</div>
-      ${h.compras?.length ? `<p class="muted" style="margin-top:8px">Para comprar: ${esc(h.compras.join(", "))}</p>` : ""}
-      <div class="row"><button class="btn small danger" type="button" data-hdel>Borrar consulta</button></div>
-    </details>
-  </div>`).join("");
+  $("hist").innerHTML = hist.map((h) => `<details class="card hist" data-hid="${esc(h.id)}">
+    <summary><span class="when">${esc(fmtWhen(h.fecha))}</span><span class="what">${esc(h.sintoma)}${h.con_foto ? " 📷" : ""}</span></summary>
+    <div class="acciones"><button class="btn small danger" type="button" data-hdel>🗑 Borrar</button></div>
+    <div class="answer">${md(h.respuesta || "")}</div>
+    ${h.compras?.length ? `<p class="muted" style="margin-top:8px">Para comprar: ${esc(h.compras.join(", "))}</p>` : ""}
+  </details>`).join("");
 }
 
 // Borra en la nube y ofrece "Deshacer" unos segundos (vuelve a insertar la misma fila).
@@ -946,51 +952,50 @@ async function borrarConsulta(id) {
   };
   toastTimer = setTimeout(() => { $("toast").hidden = true; }, 6000);
 }
+// Menú abajo para confirmar el borrado.
+let sheetId = null, sheetDesde = 0;
+// Al soltar el dedo después de mantener apretado, el teléfono genera un "toque" que caería sobre el menú
+// recién abierto (y podría tocar "Borrar"). Se ignoran los toques del primer medio segundo.
+const menuRecienAbierto = () => Date.now() - sheetDesde < 500;
+function abrirMenu(id) {
+  const h = hist.find((x) => x.id === id); if (!h) return;
+  sheetId = id; sheetDesde = Date.now();
+  $("sheetTit").textContent = `${fmtWhen(h.fecha)} · ${h.sintoma}`;
+  $("sheet").hidden = false; $("sheetBorrar").focus();
+}
+const cerrarMenu = () => { $("sheet").hidden = true; sheetId = null; };
+$("sheetCancelar").onclick = () => { if (!menuRecienAbierto()) cerrarMenu(); };
+$("sheet").addEventListener("click", (e) => { if (e.target === $("sheet") && !menuRecienAbierto()) cerrarMenu(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("sheet").hidden) cerrarMenu(); });
+$("sheetBorrar").onclick = () => { if (menuRecienAbierto()) return; const id = sheetId; cerrarMenu(); if (id) borrarConsulta(id); };
+
+// Botón 🗑 dentro de la consulta abierta.
 $("hist").addEventListener("click", (e) => {
-  if (!e.target.matches("[data-hdel]")) return;
-  const id = e.target.closest("[data-hid]").dataset.hid;
-  confirmar(e.target, "¿Seguro? Borrar", () => borrarConsulta(id));
+  const b = e.target.closest("[data-hdel]"); if (!b) return;
+  abrirMenu(b.closest("[data-hid]").dataset.hid);
 });
 
-// Deslizar a la derecha: más de 35 % del ancho borra; menos, vuelve a su lugar.
+// Mantener apretado (≈0,5 s) sobre una consulta abre el menú, sin abrirla ni cerrarla.
 {
-  let d = null, sinClick = false;
+  let t = null, x0 = 0, y0 = 0, disparado = false;
   const lista = $("hist");
+  const cancelar = () => { clearTimeout(t); t = null; };
   lista.addEventListener("pointerdown", (e) => {
-    const sw = e.target.closest(".swipe");
-    if (!sw || (e.pointerType === "mouse" && e.button !== 0) || e.target.closest("button")) return;
-    d = { sw, card: sw.querySelector(".hist"), x0: e.clientX, y0: e.clientY, dx: 0, activo: false, pid: e.pointerId };
+    const card = e.target.closest(".hist"); if (!card || e.target.closest("button")) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    disparado = false; x0 = e.clientX; y0 = e.clientY;
+    t = setTimeout(() => { disparado = true; t = null; navigator.vibrate?.(15); abrirMenu(card.dataset.hid); }, 500);
   });
-  lista.addEventListener("pointermove", (e) => {
-    if (!d || e.pointerId !== d.pid) return;
-    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
-    if (!d.activo) {
-      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { d = null; return; } // scroll vertical
-      if (dx < 12) return;
-      d.activo = true; d.sw.classList.add("dragging");
-      try { d.sw.setPointerCapture(d.pid); } catch {}
-    }
-    d.dx = Math.max(0, dx);
-    d.card.style.transform = `translateX(${d.dx}px)`;
-    d.sw.classList.toggle("armed", d.dx > d.sw.offsetWidth * 0.35);
+  lista.addEventListener("pointermove", (e) => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) cancelar(); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach((ev) => lista.addEventListener(ev, cancelar));
+  // Android/escritorio: el menú contextual (mantener apretado o clic derecho) abre nuestro menú.
+  lista.addEventListener("contextmenu", (e) => {
+    const card = e.target.closest(".hist"); if (!card) return;
+    e.preventDefault(); cancelar();
+    if (!disparado) { disparado = true; abrirMenu(card.dataset.hid); }
   });
-  const soltar = (e) => {
-    if (!d || e.pointerId !== d.pid) return;
-    const { sw, card, dx, activo } = d; d = null;
-    if (!activo) return;
-    sinClick = true; setTimeout(() => sinClick = false, 0);
-    sw.classList.remove("dragging");
-    if (e.type === "pointerup" && dx > sw.offsetWidth * 0.35) {
-      card.style.transform = "translateX(110%)";
-      setTimeout(() => borrarConsulta(sw.dataset.hid), 180);
-    } else {
-      card.style.transform = ""; sw.classList.remove("armed");
-    }
-  };
-  lista.addEventListener("pointerup", soltar);
-  lista.addEventListener("pointercancel", soltar);
-  // Que soltar después de arrastrar no abra/cierre la consulta.
-  lista.addEventListener("click", (e) => { if (sinClick) { e.preventDefault(); e.stopPropagation(); } }, true);
+  // Que soltar después de mantener apretado no abra/cierre la consulta.
+  lista.addEventListener("click", (e) => { if (disparado && e.target.closest("summary")) { e.preventDefault(); disparado = false; } }, true);
 }
 
 // ---------- Farmacias ----------
