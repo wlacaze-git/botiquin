@@ -1,0 +1,6 @@
+# Configuración mínima para la CLI de Supabase (npx supabase ...).
+project_id = "botiquin"
+
+[functions.claude]
+# El gateway de Supabase exige un JWT válido antes de llegar a la función.
+verify_jwt = true

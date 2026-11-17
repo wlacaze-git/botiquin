@@ -1,9 +1,17 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Botiquín</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Inventario del botiquín de casa, consultas de síntomas y farmacias cerca.">
+<meta name="theme-color" content="#f6f8f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101816" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='5' width='20' height='16' rx='3' fill='%230e7c6b'/%3E%3Cpath d='M12 9v8M8 13h8' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap">
 <style>
-/* Layout: one-screen phone app. Sticky header, scrolling content, fixed bottom tab bar. */
+/* Layout: app de teléfono. Header fijo arriba, contenido con scroll, barra de pestañas abajo. */
 :root {
   --bg: #f6f8f7;
   --surface: #ffffff;
@@ -20,6 +28,7 @@
   --bad-soft: #fbe3e0;
   --display: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
   --body: "DM Sans", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -36,8 +45,10 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 var(--body); }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 var(--body); padding-top: env(safe-area-inset-top, 0px); }
+img { max-width: 100%; }
 button, input, textarea, select { font: inherit; color: inherit; }
 header {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
@@ -45,10 +56,13 @@ header {
   padding-block: 12px 10px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
 }
 header h1 { margin: 0; font: 700 24px/1.1 var(--display); letter-spacing: -0.01em; }
-header .sub { color: var(--muted); font-size: 13px; }
+header .sub { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdr-r { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.avatar { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--accent-soft); font-weight: 700; cursor: pointer; padding: 0; overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 main {
   padding-block: 16px 96px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -57,6 +71,7 @@ main {
 }
 section[data-tab] { display: grid; gap: 14px; }
 h2 { margin: 0; font: 700 20px/1.2 var(--display); text-wrap: balance; }
+h3 { margin: 0; font: 700 17px/1.2 var(--display); }
 p { margin: 0; }
 .muted { color: var(--muted); font-size: 14px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
@@ -71,8 +86,8 @@ p { margin: 0; }
 .med .stripe { align-self: stretch; border-radius: 0 3px 3px 0; background: var(--ok); }
 .med.warn .stripe { background: var(--warn); } .med.bad .stripe { background: var(--bad); }
 .med .body { min-width: 0; display: grid; gap: 3px; }
-.med .name { font-weight: 700; }
-.med .meta { font-size: 13px; color: var(--muted); }
+.med .name { font-weight: 700; overflow-wrap: anywhere; }
+.med .meta { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 .med .uso { font-size: 14px; }
 .chip { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--fg); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .chip.warn { background: var(--warn-soft); } .chip.bad { background: var(--bad-soft); }
@@ -82,7 +97,7 @@ p { margin: 0; }
 .btn.small { padding: 6px 10px; font-size: 13px; }
 .btn.danger { color: var(--bad); }
 .btn:disabled { opacity: .55; cursor: default; }
-.btn:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, .avatar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .field { display: grid; gap: 4px; }
 .field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
@@ -91,27 +106,27 @@ p { margin: 0; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
 .drop { border: 2px dashed var(--line); border-radius: 14px; padding: 22px 14px; text-align: center; display: grid; gap: 8px; justify-items: center; background: var(--surface); }
-.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
 .answer { white-space: pre-wrap; line-height: 1.5; }
 .answer:empty { display: none; }
 .answer strong { color: var(--accent); font-weight: 700; }
 .hist summary { cursor: pointer; display: grid; gap: 2px; }
 .hist summary .when { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
-.hist summary .what { font-weight: 500; }
+.hist summary .what { font-weight: 500; overflow-wrap: anywhere; }
 .hist .answer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .hist .row { margin-top: 8px; }
 .status { font-size: 14px; color: var(--muted); }
+.status.bad { color: var(--bad); }
 .empty { text-align: center; padding: 28px 14px; color: var(--muted); display: grid; gap: 6px; }
 .empty b { color: var(--fg); font-family: var(--display); font-size: 18px; }
-.banner { background: var(--warn-soft); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
 nav.tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
   background: var(--surface); border-top: 1px solid var(--line);
   display: grid; grid-template-columns: repeat(4, 1fr);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-left: max(0px, env(safe-area-inset-left, 0px));
-  padding-right: max(0px, env(safe-area-inset-right, 0px));
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 nav.tabs button { background: none; border: 0; padding: 10px 4px 8px; display: grid; justify-items: center; gap: 2px; font-size: 11px; color: var(--muted); cursor: pointer; }
 nav.tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -119,16 +134,51 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
 .links { display: grid; gap: 10px; }
 .links a { display: block; padding: 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--fg); text-decoration: none; font-weight: 500; }
 .links a span { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+.shop-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.shop-item > div { min-width: 0; overflow-wrap: anywhere; }
+/* Pantalla de entrada */
+.login { min-height: calc(100dvh - 120px); display: grid; place-items: center; padding: 24px 16px; }
+.login .card { max-width: 380px; width: 100%; display: grid; gap: 14px; text-align: center; padding: 28px 22px; }
+.login h2 { font-size: 26px; }
+.gbtn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.gbtn svg { width: 18px; height: 18px; }
+/* Panel de cuenta */
+dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--fg); padding: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); }
+dialog::backdrop { background: rgb(0 0 0 / .45); }
+.dlg { display: grid; gap: 16px; padding: 18px; }
+.dlg .blk { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+.dlg textarea { width: 100%; min-height: 90px; font: 12px/1.4 ui-monospace, monospace; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.dlg .inline { display: flex; gap: 8px; }
+.dlg .inline input { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.dlg-hdr { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 @media (prefers-reduced-motion: no-preference) { .pulse { animation: pulse 1.2s ease-in-out infinite; } }
 @keyframes pulse { 50% { opacity: .5; } }
 </style>
+</head>
+<body>
 
 <header>
   <h1>Botiquín</h1>
-  <div class="sub" id="hdrSub">Tu casa</div>
+  <div class="hdr-r">
+    <span class="sub" id="hdrSub">Cargando…</span>
+    <button class="avatar" id="btnCuenta" type="button" aria-label="Cuenta y ajustes" hidden></button>
+  </div>
 </header>
 
-<main>
+<!-- ENTRADA -->
+<div class="login" id="login" hidden>
+  <div class="card">
+    <h2>Tu botiquín, en el teléfono</h2>
+    <p class="muted">Llevá el inventario de lo que tenés en casa, consultá qué tomar y encontrá farmacias cerca. Tus datos se guardan en tu cuenta y los ves desde cualquier dispositivo.</p>
+    <button class="btn primary gbtn" id="btnGoogle" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#fff" opacity=".85" d="M12 22c2.7 0 5-.9 6.6-2.5l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#fff" opacity=".7" d="M6.4 13.9a6 6 0 0 1 0-3.8V7.5H3.1a10 10 0 0 0 0 9z"/><path fill="#fff" opacity=".55" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.5l3.3 2.6C7.2 7.8 9.4 6 12 6z"/></svg>
+      Entrar con Google
+    </button>
+    <p class="status" id="loginStatus"></p>
+  </div>
+</div>
+
+<main id="app" hidden>
   <!-- INVENTARIO -->
   <section data-tab="lista">
     <div class="stats">
@@ -138,7 +188,7 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
     </div>
     <input class="search" id="q" type="search" placeholder="Buscar por nombre, principio activo o uso…" autocomplete="off">
     <div class="list" id="list"></div>
-    <div class="empty" id="emptyList">
+    <div class="empty" id="emptyList" hidden>
       <b>Todavía no hay nada cargado</b>
       <p>Andá a <b>Agregar</b>, sacale una foto a la caja y listo.</p>
     </div>
@@ -147,9 +197,9 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
   <!-- AGREGAR -->
   <section data-tab="agregar" hidden>
     <h2>Agregar medicamentos</h2>
-    <p class="muted">Sacá una foto a la caja (de frente y, si podés, al lado donde está el vencimiento). Podés mandar varias cajas de una.</p>
+    <p class="muted">Sacá una foto a la caja (de frente y, si podés, al lado donde está el vencimiento). Podés mandar hasta 8 fotos de una.</p>
     <div class="drop" id="drop">
-      <input type="file" id="photos" accept="image/*" multiple capture="environment" hidden>
+      <input type="file" id="photos" accept="image/*" multiple hidden>
       <button class="btn primary" id="btnCam" type="button">Sacar foto / elegir imágenes</button>
       <p class="muted" id="photoHint">También podés arrastrar fotos acá.</p>
       <div class="thumbs" id="thumbs"></div>
@@ -159,7 +209,7 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
       <button class="btn" id="btnStop1" type="button" hidden>Detener</button>
       <button class="btn" id="btnManual" type="button">Cargar a mano</button>
     </div>
-    <p class="status" id="readStatus"></p>
+    <p class="status" id="readStatus" aria-live="polite"></p>
     <div id="drafts" class="list"></div>
   </section>
 
@@ -169,10 +219,10 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
     <p class="muted">Contame el síntoma (o mandá una foto, por ejemplo de una picadura o una receta) y reviso qué tenés en casa.</p>
     <div class="field">
       <label for="sym">Síntomas</label>
-      <textarea id="sym" placeholder="Ej: me duele la cabeza desde la mañana y tengo un poco de fiebre"></textarea>
+      <textarea id="sym" maxlength="2000" placeholder="Ej: me duele la cabeza desde la mañana y tengo un poco de fiebre"></textarea>
     </div>
     <div class="row">
-      <input type="file" id="symPhoto" accept="image/*" capture="environment" hidden>
+      <input type="file" id="symPhoto" accept="image/*" hidden>
       <button class="btn" id="btnSymPhoto" type="button">Adjuntar foto</button>
       <span class="muted" id="symPhotoName"></span>
     </div>
@@ -180,27 +230,27 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
       <button class="btn primary" id="btnAsk" type="button">Revisar mi botiquín</button>
       <button class="btn" id="btnStop2" type="button" hidden>Detener</button>
     </div>
-    <p class="status" id="askStatus"></p>
+    <p class="status" id="askStatus" aria-live="polite"></p>
     <div class="card answer" id="answer"></div>
     <p class="muted">Esto es orientación, no un diagnóstico. Ante síntomas intensos, que empeoran o no se te van, consultá a un médico o farmacéutico. Emergencias: 112.</p>
-    <h2 style="font-size:17px;margin-top:10px">Consultas anteriores</h2>
-    <p class="muted" id="histHint">Acá van a quedar guardadas tus consultas para que las puedas volver a ver.</p>
+    <h3 style="margin-top:10px">Consultas anteriores</h3>
+    <p class="muted" id="histHint">Acá van a quedar guardadas tus consultas para que las puedas volver a ver. Solo las ves vos, aunque compartas el botiquín.</p>
     <div class="list" id="hist"></div>
   </section>
 
   <!-- FARMACIAS -->
   <section data-tab="farmacias" hidden>
     <h2>Farmacias cerca</h2>
-    <p class="muted">Se abren en tu app de mapas con tu ubicación. El stock de un medicamento concreto hay que confirmarlo llamando.</p>
+    <p class="muted">Se abren en tu app de mapas. El stock de un medicamento concreto hay que confirmarlo llamando.</p>
     <div class="row">
       <button class="btn primary" id="btnGeo" type="button">Buscar farmacias donde estoy</button>
-      <span class="muted" id="geoStatus"></span>
+      <span class="muted" id="geoStatus" aria-live="polite"></span>
     </div>
     <details>
       <summary class="muted">Buscar alrededor de otra dirección</summary>
       <div class="field" style="margin-top:8px">
         <label for="addr">Dirección (calle y ciudad)</label>
-        <input id="addr" type="text" placeholder="Ej: Calle Mayor 10, Madrid" autocomplete="street-address">
+        <input id="addr" type="text" maxlength="200" placeholder="Ej: Calle Mayor 10, Madrid" autocomplete="street-address">
       </div>
     </details>
     <div class="links">
@@ -210,9 +260,9 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
       <a href="https://www.farmaciasdeguardia.org/" target="_blank" rel="noopener">Farmacias de guardia por localidad <span>Calendario oficial de guardias en España</span></a>
     </div>
     <div class="card">
-      <h2 style="font-size:17px">Lista para la farmacia</h2>
-      <p class="muted" id="shopHint">Cuando consultes un síntoma y no tengas nada en casa, lo que te sugiera comprar aparece acá.</p>
-      <div class="list" id="shop"></div>
+      <h3>Lista para la farmacia</h3>
+      <p class="muted" id="shopHint" style="margin-top:6px">Cuando consultes un síntoma y no tengas nada en casa, lo que te sugiera comprar aparece acá.</p>
+      <div class="list" id="shop" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px">
         <button class="btn small" id="btnCopyShop" type="button" hidden>Copiar lista</button>
         <button class="btn small" id="btnClearShop" type="button" hidden>Vaciar</button>
@@ -221,18 +271,105 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
   </section>
 </main>
 
-<nav class="tabs" role="tablist">
+<nav class="tabs" role="tablist" id="tabs" hidden>
   <button role="tab" data-go="lista" aria-selected="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M12 11v5M9.5 13.5h5"/></svg>Botiquín</button>
   <button role="tab" data-go="agregar" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Agregar</button>
   <button role="tab" data-go="consultar" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg>Consultar</button>
   <button role="tab" data-go="farmacias" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><path d="M12 7v6M9 10h6"/></svg>Farmacias</button>
 </nav>
 
-<script>
-(() => {
+<!-- CUENTA -->
+<dialog id="cuenta" aria-labelledby="cuentaTit">
+  <div class="dlg">
+    <div class="dlg-hdr">
+      <h2 id="cuentaTit" style="font-size:20px">Cuenta</h2>
+      <button class="btn small" type="button" data-close>Cerrar</button>
+    </div>
+    <p class="muted" id="cuentaEmail"></p>
+
+    <div class="blk">
+      <h3>Botiquín</h3>
+      <div class="field" id="selBotiquinWrap" hidden>
+        <label for="selBotiquin">Estás viendo</label>
+        <select id="selBotiquin"></select>
+      </div>
+      <div class="field">
+        <label for="nombreBotiquin">Nombre</label>
+        <div class="inline"><input id="nombreBotiquin" maxlength="80"><button class="btn small" id="btnRenombrar" type="button">Guardar</button></div>
+      </div>
+      <p class="muted" id="miembros"></p>
+    </div>
+
+    <div class="blk">
+      <h3>Compartir</h3>
+      <p class="muted">Generá un enlace para que otra persona use este mismo botiquín con su cuenta de Google. Vale 7 días. Las consultas de síntomas siguen siendo privadas de cada uno.</p>
+      <div class="row"><button class="btn small" id="btnInvitar" type="button">Crear enlace de invitación</button></div>
+      <div class="inline" id="invWrap" hidden><input id="invLink" readonly><button class="btn small" id="btnCopyInv" type="button">Copiar</button></div>
+      <div class="field">
+        <label for="codUnirse">¿Te pasaron un código?</label>
+        <div class="inline"><input id="codUnirse" maxlength="20" placeholder="Código" autocapitalize="characters"><button class="btn small" id="btnUnirse" type="button">Unirme</button></div>
+      </div>
+      <p class="status" id="shareStatus" aria-live="polite"></p>
+    </div>
+
+    <div class="blk">
+      <h3>Tus datos</h3>
+      <div class="row"><button class="btn small" id="btnExport" type="button">Descargar copia (JSON)</button></div>
+      <details>
+        <summary class="muted">Importar datos (desde la versión anterior o una copia)</summary>
+        <div style="display:grid;gap:8px;margin-top:8px">
+          <p class="muted">Pegá el texto que copiaste con "Exportar mis datos" o elegí un archivo .json.</p>
+          <textarea id="impTxt" placeholder='{"formato":"botiquin-export", ...}'></textarea>
+          <div class="row">
+            <input type="file" id="impFile" accept="application/json,.json" hidden>
+            <button class="btn small" id="btnImpFile" type="button">Elegir archivo</button>
+            <button class="btn small primary" id="btnImport" type="button">Importar</button>
+          </div>
+        </div>
+      </details>
+      <p class="status" id="dataStatus" aria-live="polite"></p>
+    </div>
+
+    <div class="blk">
+      <div class="row"><button class="btn danger" id="btnSalir" type="button">Cerrar sesión</button></div>
+    </div>
+  </div>
+</dialog>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const ls = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+function note(msg, bad) { $("hdrSub").textContent = msg; $("hdrSub").style.color = bad ? "var(--bad)" : ""; }
+function status(id, msg, bad) { const el = $(id); el.textContent = msg; el.classList.toggle("bad", !!bad); }
+function confirmar(btn, texto, accion) { // doble toque para acciones destructivas
+  if (btn.dataset.sure) { accion(); return; }
+  const orig = btn.textContent; btn.dataset.sure = "1"; btn.textContent = texto;
+  setTimeout(() => { delete btn.dataset.sure; if (btn.isConnected) btn.textContent = orig; }, 3000);
+}
+
+// ---------- Configuración ----------
+if (SUPABASE_URL.includes("TU-PROYECTO")) {
+  $("login").hidden = false; $("btnGoogle").disabled = true;
+  status("loginStatus", "Falta configurar Supabase en config.js (ver README).", true);
+  note("Sin configurar", true);
+  throw new Error("config.js sin completar");
+}
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { flowType: "pkce" } });
+
+// Invitación por enlace (?unirse=CODIGO): se guarda para usarla después de entrar.
+{
+  const u = new URL(location.href);
+  const c = u.searchParams.get("unirse");
+  if (c) { ls.set("botiquin.unirse", c); u.searchParams.delete("unirse"); history.replaceState(null, "", u); }
+}
 
 // ---------- Tabs ----------
 const tabs = [...document.querySelectorAll("nav.tabs button")];
@@ -240,16 +377,16 @@ function go(name) {
   document.querySelectorAll("section[data-tab]").forEach((s) => s.hidden = s.dataset.tab !== name);
   tabs.forEach((b) => b.setAttribute("aria-selected", String(b.dataset.go === name)));
   window.scrollTo(0, 0);
-  try { localStorage.setItem("botiquin.tab", name); } catch {}
+  ls.set("botiquin.tab", name);
 }
 tabs.forEach((b) => b.onclick = () => go(b.dataset.go));
-try { const t = localStorage.getItem("botiquin.tab"); if (t && t !== "lista") go(t); } catch {}
+{ const t = ls.get("botiquin.tab"); if (t && t !== "lista" && tabs.some((b) => b.dataset.go === t)) go(t); }
 
 // ---------- Fechas ----------
 const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-function expiryEnd(v) { // "YYYY-MM" o "YYYY-MM-DD" -> Date del último momento válido
-  if (!v) return null;
-  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(v);
+const hoyLocal = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+function expiryEnd(v) { // "YYYY-MM" o "YYYY-MM-DD" -> último momento válido
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(v || "");
   if (!m) return null;
   const y = +m[1], mo = +m[2];
   if (m[3]) return new Date(y, mo - 1, +m[3], 23, 59, 59);
@@ -268,72 +405,152 @@ function expState(v) {
   if (days <= 60) return { cls: "warn", label: "Vence " + fmtExp(v) };
   return { cls: "", label: "Vence " + fmtExp(v) };
 }
+function fmtWhen(iso) {
+  const d = new Date(iso); if (isNaN(d)) return "";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+const VENC_RE = /^\d{4}-\d{2}(-\d{2})?$/;
 
-// ---------- Almacenamiento (db compartida, con respaldo local) ----------
-let meds = [];           // {id, nombre, principio, presentacion, cantidad, vencimiento, uso, receta, notas}
-let shop = [];           // [{id, nombre, motivo}]
-let hist = [];           // [{id, fecha, sintoma, respuesta, compras}]
-let db = null, store = null, histStore = null;
-const LS_KEY = "botiquin.meds", LS_SHOP = "botiquin.shop", LS_HIST = "botiquin.hist";
-function loadLocal() {
-  try { meds = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { meds = []; }
-  try { shop = JSON.parse(localStorage.getItem(LS_SHOP) || "[]"); } catch { shop = []; }
-  try { hist = JSON.parse(localStorage.getItem(LS_HIST) || "[]"); } catch { hist = []; }
-}
-function saveLocal() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(meds)); localStorage.setItem(LS_SHOP, JSON.stringify(shop)); localStorage.setItem(LS_HIST, JSON.stringify(hist.slice(0, 100))); } catch {}
-}
-async function putHist(h) {
-  hist.unshift(h); renderHist();
-  if (histStore) { try { await histStore.doc(h.id).set(h); } catch {} } else saveLocal();
-}
-async function delHist(id) {
-  hist = hist.filter((x) => x.id !== id); renderHist();
-  if (histStore) { try { await histStore.doc(id).delete(); } catch {} } else saveLocal();
-}
-async function putMed(m) {
-  const i = meds.findIndex((x) => x.id === m.id);
-  if (i >= 0) meds[i] = m; else meds.push(m);
-  render();
-  if (store) { try { await store.doc(m.id).set(m); } catch (e) { note("No se pudo guardar en la nube: " + e.code, true); } }
-  else saveLocal();
-}
-async function delMed(id) {
-  meds = meds.filter((x) => x.id !== id);
-  render();
-  if (store) { try { await store.doc(id).delete(); } catch (e) { note("No se pudo borrar: " + e.code, true); } }
-  else saveLocal();
-}
-async function saveShop() {
-  renderShop();
-  if (db) { try { await db.doc("config/compras").set({ items: shop }); } catch {} }
-  else saveLocal();
-}
-function note(msg, bad) { $("hdrSub").textContent = msg; $("hdrSub").style.color = bad ? "var(--bad)" : ""; }
+// ---------- Estado ----------
+let user = null;
+let botiquines = [];   // [{id, nombre, direccion}]
+let botiquinId = null;
+let meds = [];         // filas de medicamentos
+let shop = [];         // filas de compras
+let hist = [];         // filas de consultas
+let canal = null;
+const botiquin = () => botiquines.find((b) => b.id === botiquinId);
 
-loadLocal(); render(); renderShop(); renderHist();
-const dbInit = (async () => {
-  db = await window.claude?.use?.("db");
-  if (!db) { note("Guardado en este teléfono"); return; }
-  store = db.collection("medicamentos");
-  note("Sincronizado");
-  store.onSnapshot((snap) => {
-    meds = snap.docs.filter((d) => d.exists).map((d) => d.data());
-    render();
-  }, (e) => { note("Sin conexión con la nube (" + e.code + ")", true); store = null; });
-  db.doc("config/compras").onSnapshot((snap) => { if (snap.exists) { shop = snap.data().items || []; renderShop(); } }, () => {});
-  histStore = db.collection("consultas");
-  histStore.orderBy("fecha", "desc").limit(100).onSnapshot((snap) => {
-    hist = snap.docs.filter((d) => d.exists).map((d) => d.data());
-    renderHist();
-  }, () => { histStore = null; });
-})();
+// ---------- Sesión ----------
+$("btnGoogle").onclick = async () => {
+  $("btnGoogle").disabled = true; status("loginStatus", "Abriendo Google…");
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: "select_account" } },
+  });
+  if (error) { $("btnGoogle").disabled = false; status("loginStatus", "No se pudo abrir Google: " + error.message, true); }
+};
 
-// ---------- Render inventario ----------
+let arrancando = false;
+sb.auth.onAuthStateChange((evento, session) => {
+  // No llamar a Supabase dentro del callback (puede trabarse): se difiere.
+  setTimeout(() => {
+    if (session?.user && !user && !arrancando) iniciar(session.user);
+    else if (!session && (user || evento === "INITIAL_SESSION")) mostrarLogin();
+  }, 0);
+});
+
+function mostrarLogin() {
+  user = null; botiquines = []; botiquinId = null; meds = []; shop = []; hist = [];
+  if (canal) { sb.removeChannel(canal); canal = null; }
+  $("app").hidden = true; $("tabs").hidden = true; $("btnCuenta").hidden = true;
+  $("login").hidden = false; $("btnGoogle").disabled = false; status("loginStatus", "");
+  note("");
+}
+
+async function iniciar(u) {
+  arrancando = true;
+  try {
+    user = u;
+    $("login").hidden = true; $("app").hidden = false; $("tabs").hidden = false;
+    pintarAvatar();
+    note("Conectando…");
+    const pendiente = ls.get("botiquin.unirse");
+    if (pendiente) {
+      ls.del("botiquin.unirse");
+      const { data, error } = await sb.rpc("unirse", { codigo: pendiente });
+      if (error) alert("El enlace de invitación no sirve o venció. Pedí uno nuevo.");
+      else ls.set("botiquin.activo", data);
+    }
+    await cargarBotiquines();
+    const pref = ls.get("botiquin.activo");
+    await cambiarBotiquin((botiquines.find((b) => b.id === pref) || botiquines[0]).id);
+  } catch (e) {
+    note("No pude conectar con la base", true);
+    console.error(e);
+  } finally {
+    arrancando = false;
+  }
+}
+
+function pintarAvatar() {
+  const b = $("btnCuenta"); b.hidden = false;
+  const foto = user.user_metadata?.avatar_url;
+  const nombre = user.user_metadata?.full_name || user.email || "?";
+  b.innerHTML = foto ? `<img src="${esc(foto)}" alt="" referrerpolicy="no-referrer">` : esc(nombre.trim()[0].toUpperCase());
+  b.title = nombre;
+}
+
+async function cargarBotiquines() {
+  const { data, error } = await sb.rpc("mi_botiquin");
+  if (error) throw error;
+  botiquines = data;
+}
+
+async function cambiarBotiquin(id) {
+  botiquinId = id; ls.set("botiquin.activo", id);
+  const b = botiquin();
+  $("addr").value = b.direccion || ""; updateMapLinks();
+  note(b.nombre);
+  $("drafts").innerHTML = "";
+  await Promise.all([cargarMeds(), cargarShop(), cargarHist()]);
+  suscribir();
+}
+
+// Cambios en otros dispositivos: Realtime + recarga al volver a la app.
+function suscribir() {
+  if (canal) sb.removeChannel(canal);
+  const f = `botiquin_id=eq.${botiquinId}`;
+  const tMeds = debounce(cargarMeds, 300), tShop = debounce(cargarShop, 300);
+  canal = sb.channel("botiquin-" + botiquinId)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "medicamentos", filter: f }, tMeds)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "medicamentos", filter: f }, tMeds)
+    .on("postgres_changes", { event: "DELETE", schema: "public", table: "medicamentos" }, tMeds)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "compras", filter: f }, tShop)
+    .on("postgres_changes", { event: "DELETE", schema: "public", table: "compras" }, tShop)
+    .subscribe();
+}
+function debounce(fn, ms) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && botiquinId) { cargarMeds(); cargarShop(); cargarHist(); }
+});
+
+// ---------- Datos ----------
+async function cargarMeds() {
+  const { data, error } = await sb.from("medicamentos").select("*").eq("botiquin_id", botiquinId);
+  if (error) { note("No pude leer el botiquín", true); return; }
+  meds = data; render();
+}
+async function cargarShop() {
+  const { data, error } = await sb.from("compras").select("*").eq("botiquin_id", botiquinId).order("created_at");
+  if (error) return;
+  shop = data; renderShop();
+}
+async function cargarHist() {
+  const { data, error } = await sb.from("consultas").select("*").eq("botiquin_id", botiquinId).order("fecha", { ascending: false }).limit(100);
+  if (error) return;
+  hist = data; renderHist();
+}
+
+async function guardarMed(id, m) {
+  const q = id
+    ? sb.from("medicamentos").update(m).eq("id", id)
+    : sb.from("medicamentos").insert({ ...m, botiquin_id: botiquinId, agregado: hoyLocal() });
+  const { error } = await q;
+  if (!error) await cargarMeds();
+  return error;
+}
+async function borrarMed(id) {
+  const { error } = await sb.from("medicamentos").delete().eq("id", id);
+  if (error) note("No se pudo borrar: " + error.message, true);
+  await cargarMeds();
+}
+
+// ---------- Inventario ----------
 function sorted() {
   return [...meds].sort((a, b) => {
     const ea = expiryEnd(a.vencimiento), eb = expiryEnd(b.vencimiento);
-    return (ea ? ea.getTime() : 8e15) - (eb ? eb.getTime() : 8e15);
+    return (ea ? ea.getTime() : 8e15) - (eb ? eb.getTime() : 8e15) || a.nombre.localeCompare(b.nombre);
   });
 }
 function render() {
@@ -354,8 +571,8 @@ function render() {
         <div><span class="chip ${s.cls}">${esc(s.label)}</span></div>
       </div>
       <div class="acts">
-        <button class="btn small" data-edit>Editar</button>
-        <button class="btn small danger" data-del>Borrar</button>
+        <button class="btn small" type="button" data-edit>Editar</button>
+        <button class="btn small danger" type="button" data-del>Borrar</button>
       </div>
     </div>`;
   }).join("");
@@ -364,112 +581,145 @@ $("q").addEventListener("input", render);
 $("list").addEventListener("click", (e) => {
   const card = e.target.closest(".med"); if (!card) return;
   const m = meds.find((x) => x.id === card.dataset.id); if (!m) return;
-  if (e.target.matches("[data-del]")) {
-    if (e.target.dataset.sure) { delMed(m.id); }
-    else { e.target.dataset.sure = "1"; e.target.textContent = "¿Seguro? Borrar"; setTimeout(() => { delete e.target.dataset.sure; e.target.textContent = "Borrar"; }, 3000); }
-  }
-  if (e.target.matches("[data-edit]")) { openDraft({ ...m }); go("agregar"); }
+  if (e.target.matches("[data-del]")) confirmar(e.target, "¿Seguro? Borrar", () => borrarMed(m.id));
+  if (e.target.matches("[data-edit]")) { openDraft(m); go("agregar"); }
 });
 
-// ---------- Borradores (formulario) ----------
+// ---------- Formularios ----------
 function draftForm(m) {
-  const id = m.id || uid();
-  return `<form class="card field" data-draft="${id}" style="gap:10px">
+  return `<form class="card field" data-id="${esc(m.id || "")}" style="gap:10px">
+    ${m.id ? `<p class="muted">Editando <b>${esc(m.nombre)}</b></p>` : ""}
     <div class="grid2">
-      <div class="field"><label>Nombre comercial</label><input name="nombre" required value="${esc(m.nombre)}"></div>
-      <div class="field"><label>Principio activo y dosis</label><input name="principio" value="${esc(m.principio)}" placeholder="Ibuprofeno 600 mg"></div>
+      <div class="field"><label>Nombre comercial</label><input name="nombre" required maxlength="200" value="${esc(m.nombre)}"></div>
+      <div class="field"><label>Principio activo y dosis</label><input name="principio" maxlength="300" value="${esc(m.principio)}" placeholder="Ibuprofeno 600 mg"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Presentación</label><input name="presentacion" value="${esc(m.presentacion)}" placeholder="comprimidos, jarabe…"></div>
-      <div class="field"><label>Cantidad que queda</label><input name="cantidad" value="${esc(m.cantidad)}" placeholder="12 comprimidos"></div>
+      <div class="field"><label>Presentación</label><input name="presentacion" maxlength="200" value="${esc(m.presentacion)}" placeholder="comprimidos, jarabe…"></div>
+      <div class="field"><label>Cantidad que queda</label><input name="cantidad" maxlength="100" value="${esc(m.cantidad)}" placeholder="12 comprimidos"></div>
     </div>
     <div class="grid2">
       <div class="field"><label>Vencimiento (mes)</label><input name="vencimiento" type="month" value="${esc((m.vencimiento || "").slice(0, 7))}"></div>
       <div class="field"><label>¿Necesita receta?</label><select name="receta"><option value="">No</option><option value="1" ${m.receta ? "selected" : ""}>Sí</option></select></div>
     </div>
-    <div class="field"><label>Para qué sirve</label><textarea name="uso" style="min-height:60px">${esc(m.uso)}</textarea></div>
+    <div class="field"><label>Para qué sirve</label><textarea name="uso" maxlength="1000" style="min-height:60px">${esc(m.uso)}</textarea></div>
     <div class="row"><button class="btn primary" type="submit">Guardar en el botiquín</button><button class="btn" type="button" data-discard>Descartar</button></div>
+    <p class="status bad" data-err></p>
   </form>`;
 }
 function openDraft(m) {
-  $("drafts").insertAdjacentHTML("afterbegin", draftForm({ nombre: "", principio: "", presentacion: "", cantidad: "", vencimiento: "", uso: "", receta: "", ...m }));
+  $("drafts").insertAdjacentHTML("afterbegin", draftForm({ nombre: "", principio: "", presentacion: "", cantidad: "", vencimiento: "", uso: "", receta: false, ...m }));
 }
 $("btnManual").onclick = () => openDraft({});
 $("drafts").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const f = e.target; const fd = new FormData(f);
-  const m = { id: f.dataset.draft, nombre: fd.get("nombre").trim(), principio: fd.get("principio").trim(), presentacion: fd.get("presentacion").trim(),
-    cantidad: fd.get("cantidad").trim(), vencimiento: fd.get("vencimiento"), uso: fd.get("uso").trim(), receta: !!fd.get("receta"), agregado: new Date().toISOString().slice(0, 10) };
-  await putMed(m); f.remove();
-  if (!$("drafts").children.length) { $("readStatus").textContent = "Guardado."; }
+  const f = e.target, fd = new FormData(f), btn = f.querySelector("[type=submit]");
+  const venc = String(fd.get("vencimiento") || "");
+  const m = {
+    nombre: fd.get("nombre").trim(), principio: fd.get("principio").trim(), presentacion: fd.get("presentacion").trim(),
+    cantidad: fd.get("cantidad").trim(), vencimiento: VENC_RE.test(venc) ? venc : "", uso: fd.get("uso").trim(), receta: !!fd.get("receta"),
+  };
+  btn.disabled = true; btn.textContent = "Guardando…";
+  const error = await guardarMed(f.dataset.id || null, m);
+  if (error) {
+    btn.disabled = false; btn.textContent = "Guardar en el botiquín";
+    f.querySelector("[data-err]").textContent = "No se pudo guardar: " + error.message;
+    return;
+  }
+  f.remove();
+  if (!$("drafts").children.length) status("readStatus", "Guardado.");
 });
 $("drafts").addEventListener("click", (e) => { if (e.target.matches("[data-discard]")) e.target.closest("form").remove(); });
 
-// ---------- Claude (sample) ----------
-let sample = null, imgOk = false;
-(async () => {
-  sample = await window.claude?.use?.("sample");
-  if (!sample) {
-    $("btnRead").hidden = true; $("btnCam").hidden = true; $("btnSymPhoto").hidden = true;
-    $("photoHint").textContent = "La lectura automática de cajas no está disponible en esta vista; cargá a mano.";
-    $("btnAsk").disabled = true; $("askStatus").textContent = "La consulta con Claude no está disponible en esta vista.";
-    return;
-  }
-  const lim = await sample.limits().catch(() => null);
-  imgOk = !!lim?.images;
-  if (!imgOk) { $("btnCam").hidden = true; $("btnSymPhoto").hidden = true; $("photoHint").textContent = "Esta vista no puede enviar fotos; cargá a mano."; }
-})();
+// ---------- Claude (vía Edge Function) ----------
 const ERR = {
-  not_granted: "No permitiste que la app use Claude. Podés cambiarlo en los permisos de la página.",
+  unauthorized: "Tu sesión venció. Cerrá sesión y volvé a entrar.",
+  cuota: "Llegaste al límite de consultas de hoy. Probá mañana.",
   rate_limited: "Demasiadas consultas seguidas. Esperá un momento y volvé a intentar.",
   refused: "Claude no pudo responder a eso. Probá describirlo de otra forma.",
   invalid_json: "No pude entender la lectura. Probá con una foto más nítida.",
   image_rejected: "Esa imagen no sirve (formato o tamaño). Probá con otra.",
+  forbidden: "No tenés acceso a este botiquín.",
+  network: "Sin conexión. Revisá internet y probá de nuevo.",
+  upstream: "Claude no respondió. Probá de nuevo en un rato.",
+  server_config: "Falta configurar la clave de Anthropic en Supabase (ver README).",
+  incomplete: "La respuesta se cortó. Probá de nuevo.",
   cancelled: "",
 };
 const errMsg = (e) => ERR[e?.code] ?? ("Hubo un problema (" + (e?.code || "error") + "). Intentá de nuevo.");
 
+async function llamarClaude(body, signal) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw { code: "unauthorized" };
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/claude`, {
+      method: "POST", signal,
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token, apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw { code: e?.name === "AbortError" ? "cancelled" : "network" };
+  }
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw { code: j.error || "http_" + res.status };
+  }
+  return res;
+}
+
+// Achica la foto (lado mayor ~1500 px, JPEG) antes de mandarla: menos datos y dentro de los límites de la API.
+async function imagenParaClaude(file, max = 1568) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko({ code: "image_rejected" }); i.src = url; });
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    const dataUrl = c.toDataURL("image/jpeg", 0.85);
+    return { media_type: "image/jpeg", data: dataUrl.slice(dataUrl.indexOf(",") + 1) };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 // Fotos para agregar
-let photoFiles = [];
+let photoFiles = [], thumbUrls = [];
 $("btnCam").onclick = () => $("photos").click();
 $("photos").addEventListener("change", () => addPhotos($("photos").files));
-const drop = $("drop");
-drop.addEventListener("dragover", (e) => { e.preventDefault(); });
-drop.addEventListener("drop", (e) => { e.preventDefault(); addPhotos(e.dataTransfer.files); });
+$("drop").addEventListener("dragover", (e) => e.preventDefault());
+$("drop").addEventListener("drop", (e) => { e.preventDefault(); addPhotos(e.dataTransfer.files); });
+function pintarThumbs() {
+  thumbUrls.forEach((u) => URL.revokeObjectURL(u));
+  thumbUrls = photoFiles.map((f) => URL.createObjectURL(f));
+  $("thumbs").innerHTML = thumbUrls.map((u, i) => `<img src="${u}" alt="${esc(photoFiles[i].name)}">`).join("");
+  $("btnRead").disabled = photoFiles.length === 0;
+}
 function addPhotos(files) {
   for (const f of files) if (f.type.startsWith("image/")) photoFiles.push(f);
+  if (photoFiles.length > 8) status("readStatus", "Máximo 8 fotos por tanda; me quedé con las primeras 8.");
   photoFiles = photoFiles.slice(0, 8);
-  $("thumbs").innerHTML = "";
-  photoFiles.forEach((f) => { const img = document.createElement("img"); img.src = URL.createObjectURL(f); img.alt = f.name; $("thumbs").appendChild(img); });
-  $("btnRead").disabled = photoFiles.length === 0 || !imgOk;
+  pintarThumbs();
   $("photos").value = "";
 }
 let ctl1 = null;
 $("btnStop1").onclick = () => ctl1?.abort();
 $("btnRead").onclick = async () => {
-  if (!sample || !photoFiles.length) return;
+  if (!photoFiles.length) return;
   ctl1 = new AbortController();
   $("btnRead").disabled = true; $("btnStop1").hidden = false;
-  $("readStatus").textContent = "Leyendo las cajas…"; $("readStatus").classList.add("pulse");
-  const prompt = `Estas fotos son cajas, blísteres o envases de medicamentos de un botiquín doméstico en España. Identificá cada medicamento distinto que aparezca (puede haber varios en una foto, o el mismo en varias fotos: no lo repitas).
-Para cada uno devolvé un objeto con estos campos:
-- "nombre": nombre comercial tal como figura en la caja (ej. "Espidifen 600").
-- "principio": principio activo y dosis (ej. "Ibuprofeno arginina 600 mg").
-- "presentacion": forma farmacéutica y tamaño del envase (ej. "20 sobres", "comprimidos recubiertos").
-- "cantidad": lo que parece quedar si se ve el blíster; si no se ve, el contenido del envase; si no, "".
-- "vencimiento": fecha de caducidad en formato "YYYY-MM" (buscá "CAD", "EXP", "Caducidad"; si solo hay mes/año usá ese mes). Si no se ve, "".
-- "uso": en una frase corta y en español sencillo, para qué sirve y la dosis habitual en adulto según el prospecto (ej. "Dolor e inflamación, fiebre. 1 sobre cada 8 h, máx. 3 al día").
-- "receta": true si en España requiere receta médica, false si es de venta libre.
-Respondé solo con un array JSON de esos objetos, sin texto adicional. Si no se identifica ningún medicamento, devolvé [].`;
+  status("readStatus", "Preparando las fotos…"); $("readStatus").classList.add("pulse");
   try {
-    const items = await sample.json(prompt, { images: photoFiles, signal: ctl1.signal, cache: false });
-    const arr = Array.isArray(items) ? items : [];
-    if (!arr.length) $("readStatus").textContent = "No encontré ningún medicamento en las fotos. Probá con otra toma.";
-    else { $("readStatus").textContent = `Leí ${arr.length} medicamento${arr.length > 1 ? "s" : ""}. Revisá los datos y guardá.`; }
-    arr.reverse().forEach((it) => openDraft({ nombre: it.nombre, principio: it.principio, presentacion: it.presentacion, cantidad: it.cantidad, vencimiento: (it.vencimiento || "").slice(0, 7), uso: it.uso, receta: !!it.receta }));
-    photoFiles = []; $("thumbs").innerHTML = "";
+    const imagenes = await Promise.all(photoFiles.map((f) => imagenParaClaude(f)));
+    status("readStatus", "Leyendo las cajas…");
+    const res = await llamarClaude({ tipo: "leer_cajas", imagenes }, ctl1.signal);
+    const { medicamentos: arr = [] } = await res.json();
+    if (!arr.length) status("readStatus", "No encontré ningún medicamento en las fotos. Probá con otra toma.");
+    else status("readStatus", `Leí ${arr.length} medicamento${arr.length > 1 ? "s" : ""}. Revisá los datos y guardá.`);
+    [...arr].reverse().forEach((it) => openDraft(it));
+    photoFiles = []; pintarThumbs();
   } catch (e) {
-    $("readStatus").textContent = errMsg(e);
+    status("readStatus", e?.name === "AbortError" ? "" : errMsg(e), true);
   } finally {
     $("readStatus").classList.remove("pulse"); $("btnStop1").hidden = true; $("btnRead").disabled = photoFiles.length === 0;
   }
@@ -480,72 +730,55 @@ let symFile = null, ctl2 = null;
 $("btnSymPhoto").onclick = () => $("symPhoto").click();
 $("symPhoto").addEventListener("change", () => { symFile = $("symPhoto").files[0] || null; $("symPhotoName").textContent = symFile ? symFile.name : ""; $("symPhoto").value = ""; });
 $("btnStop2").onclick = () => ctl2?.abort();
-function inventoryText() {
-  if (!meds.length) return "(el botiquín está vacío)";
-  return sorted().map((m) => {
-    const s = expState(m.vencimiento);
-    return `- ${m.nombre} | ${m.principio || "?"} | ${m.presentacion || ""} | queda: ${m.cantidad || "?"} | vence: ${m.vencimiento || "?"}${s.cls === "bad" ? " (VENCIDO)" : s.cls === "warn" ? " (vence pronto)" : ""} | uso: ${m.uso || ""}${m.receta ? " | con receta" : ""}`;
-  }).join("\n");
+function md(t) { // solo negritas: **texto** -> <strong>; el resto escapado
+  return esc(t).replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>");
 }
+const limpiar = (t) => t.replace(/\n?COMPRAR:.*$/s, "").trim();
 $("btnAsk").onclick = async () => {
-  const sym = $("sym").value.trim();
-  if (!sample || (!sym && !symFile)) { $("askStatus").textContent = "Contame qué te pasa o adjuntá una foto."; return; }
+  const sintoma = $("sym").value.trim();
+  if (!sintoma && !symFile) { status("askStatus", "Contame qué te pasa o adjuntá una foto."); return; }
   ctl2 = new AbortController();
   $("btnAsk").disabled = true; $("btnStop2").hidden = false; $("answer").textContent = "";
-  $("askStatus").textContent = "Revisando tu botiquín…"; $("askStatus").classList.add("pulse");
-  const today = new Date().toISOString().slice(0, 10);
-  const prompt = `Sos un farmacéutico de confianza en España. Hoy es ${today}. Una persona adulta te cuenta un síntoma y te muestra el inventario de su botiquín de casa.
-
-SÍNTOMA O CONSULTA: ${sym || "(ver la foto adjunta)"}${symFile ? "\n(Hay una foto adjunta: describí brevemente qué ves si es relevante.)" : ""}
-
-BOTIQUÍN:
-${inventoryText()}
-
-Respondé en español, breve y práctico, en texto plano salvo una excepción: el nombre de cada medicamento o producto que recomendás (usar o comprar) va entre dobles asteriscos, así: **Espidifen 600**. Nada más va en negrita. Estructura:
-1. "Lo que tenés en casa": qué medicamento(s) del botiquín servirían, con dosis orientativa de adulto y cuánto tiempo. Nunca recomiendes uno marcado VENCIDO (decí que está vencido y hay que tirarlo en el punto SIGRE de la farmacia). Si varios sirven, elegí el más adecuado y decí por qué.
-2. "Si no tenés nada que sirva" (solo si aplica): qué comprar en la farmacia sin receta en España (principio activo y un nombre comercial habitual), y si lo que haría falta requiere receta, decilo.
-3. "Cuándo ir al médico": señales de alarma concretas para este síntoma.
-Si el síntoma sugiere una urgencia (dolor en el pecho, dificultad para respirar, confusión, fiebre muy alta, reacción alérgica grave, etc.), decí primero que llame al 112.
-Al final, en una última línea separada, escribí exactamente: COMPRAR: seguido de una lista separada por ";" de lo que recomendás comprar (nombre o principio activo), o COMPRAR: nada.`;
-  const clean = (t) => t.replace(/\n?COMPRAR:.*$/s, "").trim();
+  status("askStatus", "Revisando tu botiquín…"); $("askStatus").classList.add("pulse");
+  let texto = "";
   try {
-    const opts = { signal: ctl2.signal, cache: false, onText: ({ text }) => { $("answer").innerHTML = md(clean(text)); } };
-    if (symFile) opts.images = symFile;
-    const { text } = await sample(prompt, opts);
-    const m = /COMPRAR:\s*(.*)$/s.exec(text);
-    const respuesta = clean(text);
-    $("answer").innerHTML = md(respuesta);
-    $("askStatus").textContent = "";
-    let items = [];
-    if (m && !/^\s*nada\.?\s*$/i.test(m[1])) {
-      items = m[1].split(";").map((s) => s.trim()).filter(Boolean);
-      items.forEach((n) => { if (!shop.some((x) => x.nombre.toLowerCase() === n.toLowerCase())) shop.push({ id: uid(), nombre: n, motivo: sym.slice(0, 60) }); });
-      await saveShop();
-      $("askStatus").textContent = "Agregué a la lista de la farmacia: " + items.join(", ") + ".";
+    const body = { tipo: "consulta", botiquin_id: botiquinId, sintoma };
+    if (symFile) body.imagen = await imagenParaClaude(symFile);
+    const res = await llamarClaude(body, ctl2.signal);
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buf = "", fin = null;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += value;
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const linea = buf.slice(0, i); buf = buf.slice(i + 1);
+        if (!linea.trim()) continue;
+        const ev = JSON.parse(linea);
+        if (ev.t) { texto += ev.t; $("answer").innerHTML = md(limpiar(texto)); }
+        else if (ev.fin) fin = ev.fin;
+        else if (ev.error) throw { code: ev.error };
+      }
     }
-    await putHist({ id: uid(), fecha: new Date().toISOString(), sintoma: sym || "(consulta con foto)", conFoto: !!symFile, respuesta, compras: items });
+    if (!fin) throw { code: "incomplete" };
+    $("answer").innerHTML = md(fin.respuesta);
+    status("askStatus", fin.compras.length ? "Agregué a la lista de la farmacia: " + fin.compras.join(", ") + "." : "");
+    $("sym").value = "";
+    await Promise.all([cargarShop(), cargarHist()]);
   } catch (e) {
-    if (e?.text) $("answer").innerHTML = md(clean(e.text));
-    $("askStatus").textContent = errMsg(e);
+    status("askStatus", e?.name === "AbortError" ? "Detenido." : errMsg(e), e?.name !== "AbortError");
   } finally {
     $("askStatus").classList.remove("pulse"); $("btnStop2").hidden = true; $("btnAsk").disabled = false;
     symFile = null; $("symPhotoName").textContent = "";
   }
 };
 
-// ---------- Historial de consultas ----------
-function md(t) { // solo negritas: **texto** -> <strong>; el resto escapado
-  return esc(t).replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>");
-}
-function fmtWhen(iso) {
-  const d = new Date(iso); if (isNaN(d)) return "";
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
+// ---------- Historial ----------
 function renderHist() {
-  const items = [...hist].sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
-  $("histHint").hidden = items.length > 0;
-  $("hist").innerHTML = items.map((h) => `<details class="card hist" data-hid="${esc(h.id)}">
-    <summary><span class="when">${esc(fmtWhen(h.fecha))}</span><span class="what">${esc(h.sintoma)}${h.conFoto ? " 📷" : ""}</span></summary>
+  $("histHint").hidden = hist.length > 0;
+  $("hist").innerHTML = hist.map((h) => `<details class="card hist" data-hid="${esc(h.id)}">
+    <summary><span class="when">${esc(fmtWhen(h.fecha))}</span><span class="what">${esc(h.sintoma)}${h.con_foto ? " 📷" : ""}</span></summary>
     <div class="answer">${md(h.respuesta || "")}</div>
     ${h.compras?.length ? `<p class="muted" style="margin-top:8px">Para comprar: ${esc(h.compras.join(", "))}</p>` : ""}
     <div class="row"><button class="btn small danger" type="button" data-hdel>Borrar consulta</button></div>
@@ -554,60 +787,180 @@ function renderHist() {
 $("hist").addEventListener("click", (e) => {
   if (!e.target.matches("[data-hdel]")) return;
   const id = e.target.closest("[data-hid]").dataset.hid;
-  if (e.target.dataset.sure) delHist(id);
-  else { e.target.dataset.sure = "1"; e.target.textContent = "¿Seguro? Borrar"; setTimeout(() => { delete e.target.dataset.sure; e.target.textContent = "Borrar consulta"; }, 3000); }
+  confirmar(e.target, "¿Seguro? Borrar", async () => {
+    const { error } = await sb.from("consultas").delete().eq("id", id);
+    if (error) note("No se pudo borrar: " + error.message, true);
+    await cargarHist();
+  });
 });
 
-// ---------- Dirección para los mapas ----------
-function updateMapLinks() {
+// ---------- Farmacias ----------
+function updateMapLinks(coords) {
   const a = $("addr").value.trim();
+  if (coords && !a) {
+    const at = `@${coords.latitude.toFixed(5)},${coords.longitude.toFixed(5)},15z`;
+    $("lnkOpen").href = `https://www.google.com/maps/search/farmacia+abierta+ahora/${at}`;
+    $("lnkGuard").href = `https://www.google.com/maps/search/farmacia+de+guardia+24+horas/${at}`;
+    $("lnkApple").href = `https://maps.apple.com/?q=farmacia&sll=${coords.latitude.toFixed(5)},${coords.longitude.toFixed(5)}`;
+    return;
+  }
   const near = a ? "+cerca+de+" + encodeURIComponent(a).replace(/%20/g, "+") : "+cerca+de+mi";
   $("lnkOpen").href = "https://www.google.com/maps/search/farmacia+abierta+ahora" + near + "/";
   $("lnkGuard").href = "https://www.google.com/maps/search/farmacia+de+guardia+24+horas" + near + "/";
   $("lnkApple").href = "https://maps.apple.com/?q=" + (a ? "farmacia&near=" + encodeURIComponent(a) : "farmacia+cerca+de+mi");
 }
-try { $("addr").value = localStorage.getItem("botiquin.addr") || ""; } catch {}
 updateMapLinks();
-// GPS del teléfono: se intenta; si el marco no lo permite, Maps usa la ubicación por su cuenta.
 $("btnGeo").onclick = () => {
-  const openNear = () => { const a = document.createElement("a"); a.href = "https://www.google.com/maps/search/farmacia+abierta+ahora+cerca+de+mi/"; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); };
-  if (!navigator.geolocation) { openNear(); return; }
-  $("geoStatus").textContent = "Buscando tu ubicación…";
-  let done = false;
-  const finish = (url, msg) => { if (done) return; done = true; $("geoStatus").textContent = msg; const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); };
+  const abrir = (url) => { if (!window.open(url, "_blank", "noopener")) location.href = url; };
+  if (!navigator.geolocation) { abrir($("lnkOpen").href); return; }
+  status("geoStatus", "Buscando tu ubicación…");
   navigator.geolocation.getCurrentPosition(
-    (p) => finish(`https://www.google.com/maps/search/farmacia+abierta+ahora/@${p.coords.latitude.toFixed(5)},${p.coords.longitude.toFixed(5)},16z`, "Abriendo Maps en tu zona."),
-    () => finish("https://www.google.com/maps/search/farmacia+abierta+ahora+cerca+de+mi/", "Maps va a usar la ubicación del teléfono."),
-    { timeout: 6000, maximumAge: 60000 }
+    (p) => { $("addr").value = ""; updateMapLinks(p.coords); status("geoStatus", "Listo, abriendo Maps en tu zona."); abrir($("lnkOpen").href); },
+    () => { updateMapLinks(); status("geoStatus", "Sin permiso de ubicación: Maps va a usar la del teléfono."); abrir($("lnkOpen").href); },
+    { timeout: 8000, maximumAge: 60000 }
   );
-  setTimeout(() => finish("https://www.google.com/maps/search/farmacia+abierta+ahora+cerca+de+mi/", "Maps va a usar la ubicación del teléfono."), 7000);
 };
-let addrTimer = null;
-$("addr").addEventListener("input", () => {
-  updateMapLinks();
-  try { localStorage.setItem("botiquin.addr", $("addr").value); } catch {}
-  clearTimeout(addrTimer);
-  addrTimer = setTimeout(() => { if (db) db.doc("config/ubicacion").set({ direccion: $("addr").value.trim() }).catch(() => {}); }, 1200);
-});
-(async () => {
-  await dbInit;
-  if (!db) return;
-  try { const s = await db.doc("config/ubicacion").get(); if (s.exists && s.data().direccion && !$("addr").value) { $("addr").value = s.data().direccion; updateMapLinks(); } } catch {}
-})();
+const guardarDireccion = debounce(async () => {
+  if (!botiquinId) return;
+  const direccion = $("addr").value.trim();
+  const { error } = await sb.from("botiquines").update({ direccion }).eq("id", botiquinId);
+  if (!error) { const b = botiquin(); if (b) b.direccion = direccion; }
+}, 1200);
+$("addr").addEventListener("input", () => { updateMapLinks(); guardarDireccion(); });
 
 // ---------- Lista de compras ----------
 function renderShop() {
-  $("shop").innerHTML = shop.map((s) => `<div class="row" style="justify-content:space-between"><div><b>${esc(s.nombre)}</b>${s.motivo ? ` <span class="muted">· ${esc(s.motivo)}</span>` : ""}</div><button class="btn small" data-shopdel="${esc(s.id)}">Ya lo compré</button></div>`).join("");
+  $("shop").innerHTML = shop.map((s) => `<div class="shop-item"><div><b>${esc(s.nombre)}</b>${s.motivo ? ` <span class="muted">· ${esc(s.motivo)}</span>` : ""}</div><button class="btn small" type="button" data-shopdel="${esc(s.id)}">Ya lo compré</button></div>`).join("");
   $("shopHint").hidden = shop.length > 0; $("btnCopyShop").hidden = !shop.length; $("btnClearShop").hidden = !shop.length;
 }
-$("shop").addEventListener("click", (e) => { const id = e.target.dataset.shopdel; if (id) { shop = shop.filter((x) => x.id !== id); saveShop(); } });
-$("btnClearShop").onclick = () => { shop = []; saveShop(); };
+$("shop").addEventListener("click", async (e) => {
+  const id = e.target.dataset.shopdel; if (!id) return;
+  e.target.disabled = true;
+  const { error } = await sb.from("compras").delete().eq("id", id);
+  if (error) note("No se pudo actualizar la lista", true);
+  await cargarShop();
+});
+$("btnClearShop").onclick = (e) => confirmar(e.target, "¿Vaciar todo?", async () => {
+  const { error } = await sb.from("compras").delete().eq("botiquin_id", botiquinId);
+  if (error) note("No se pudo vaciar la lista", true);
+  await cargarShop();
+});
 $("btnCopyShop").onclick = async () => {
   const txt = shop.map((s) => "- " + s.nombre).join("\n");
   try { await navigator.clipboard.writeText(txt); $("btnCopyShop").textContent = "Copiado"; setTimeout(() => $("btnCopyShop").textContent = "Copiar lista", 1500); }
-  catch { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); setTimeout(() => ta.remove(), 4000); }
+  catch { prompt("Copiá la lista:", txt); }
 };
-})();
-</script>
 
-</body></html>
+// ---------- Cuenta ----------
+const dlg = $("cuenta");
+dlg.addEventListener("click", (e) => { if (e.target === dlg || e.target.matches("[data-close]")) dlg.close(); });
+$("btnCuenta").onclick = async () => {
+  $("cuentaEmail").textContent = "Entraste como " + (user?.email || "");
+  $("selBotiquinWrap").hidden = botiquines.length < 2;
+  $("selBotiquin").innerHTML = botiquines.map((b) => `<option value="${esc(b.id)}" ${b.id === botiquinId ? "selected" : ""}>${esc(b.nombre)}</option>`).join("");
+  $("nombreBotiquin").value = botiquin()?.nombre || "";
+  $("invWrap").hidden = true; status("shareStatus", ""); status("dataStatus", "");
+  dlg.showModal();
+  const { data } = await sb.from("miembros").select("email, user_id").eq("botiquin_id", botiquinId);
+  const otros = (data || []).filter((m) => m.user_id !== user.id).map((m) => m.email || "otra cuenta");
+  $("miembros").textContent = otros.length ? "Lo compartís con: " + otros.join(", ") : "Solo lo usás vos.";
+};
+$("selBotiquin").onchange = async () => { dlg.close(); await cambiarBotiquin($("selBotiquin").value); };
+$("btnRenombrar").onclick = async () => {
+  const nombre = $("nombreBotiquin").value.trim(); if (!nombre) return;
+  const { error } = await sb.from("botiquines").update({ nombre }).eq("id", botiquinId);
+  if (error) { status("shareStatus", "No se pudo renombrar: " + error.message, true); return; }
+  botiquin().nombre = nombre; note(nombre); $("btnRenombrar").textContent = "Guardado";
+  setTimeout(() => $("btnRenombrar").textContent = "Guardar", 1500);
+};
+$("btnInvitar").onclick = async () => {
+  const { data, error } = await sb.rpc("crear_invitacion", { b: botiquinId });
+  if (error) { status("shareStatus", "No se pudo crear la invitación.", true); return; }
+  const link = `${location.origin}${location.pathname}?unirse=${encodeURIComponent(data)}`;
+  $("invLink").value = link; $("invWrap").hidden = false;
+  status("shareStatus", `Código: ${data}. Mandale el enlace; tiene que entrar con su cuenta de Google.`);
+  if (navigator.share) navigator.share({ title: "Botiquín", text: "Te invito a mi botiquín", url: link }).catch(() => {});
+};
+$("btnCopyInv").onclick = async () => {
+  try { await navigator.clipboard.writeText($("invLink").value); $("btnCopyInv").textContent = "Copiado"; }
+  catch { $("invLink").select(); }
+};
+$("btnUnirse").onclick = async () => {
+  const codigo = $("codUnirse").value.trim(); if (!codigo) return;
+  const { data, error } = await sb.rpc("unirse", { codigo });
+  if (error) { status("shareStatus", "Ese código no sirve o venció.", true); return; }
+  $("codUnirse").value = "";
+  await cargarBotiquines(); dlg.close(); await cambiarBotiquin(data);
+  note("Te uniste a " + botiquin().nombre);
+};
+$("btnSalir").onclick = async () => { dlg.close(); await sb.auth.signOut(); mostrarLogin(); };
+
+// Exportar / importar
+$("btnExport").onclick = () => {
+  const data = {
+    formato: "botiquin-export", version: 2, exportado: new Date().toISOString(),
+    botiquin: botiquin()?.nombre, direccion: botiquin()?.direccion || "",
+    medicamentos: meds.map(({ botiquin_id, created_at, updated_at, ...m }) => m),
+    consultas: hist.map(({ botiquin_id, user_id, ...h }) => h),
+    compras: shop.map(({ botiquin_id, created_at, ...s }) => s),
+  };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
+  const a = document.createElement("a"); a.href = url; a.download = `botiquin-${hoyLocal()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+};
+$("btnImpFile").onclick = () => $("impFile").click();
+$("impFile").addEventListener("change", async () => {
+  const f = $("impFile").files[0]; $("impFile").value = "";
+  if (f) $("impTxt").value = await f.text();
+});
+const txt = (v, max) => String(v ?? "").trim().slice(0, max);
+$("btnImport").onclick = async () => {
+  let d;
+  try { d = JSON.parse($("impTxt").value); } catch { status("dataStatus", "Eso no es un JSON válido.", true); return; }
+  const nuevosMeds = (Array.isArray(d.medicamentos) ? d.medicamentos : []).map((m) => ({
+    botiquin_id: botiquinId,
+    nombre: txt(m.nombre, 200), principio: txt(m.principio, 300), presentacion: txt(m.presentacion, 200),
+    cantidad: txt(m.cantidad, 100), vencimiento: VENC_RE.test(m.vencimiento || "") ? m.vencimiento : "",
+    uso: txt(m.uso, 1000), receta: !!m.receta,
+    ...(/^\d{4}-\d{2}-\d{2}$/.test(m.agregado || "") ? { agregado: m.agregado } : {}),
+  })).filter((m) => m.nombre);
+  const nuevasCons = (Array.isArray(d.consultas) ? d.consultas : []).map((h) => ({
+    botiquin_id: botiquinId,
+    sintoma: txt(h.sintoma, 4000) || "(sin texto)", con_foto: !!(h.conFoto ?? h.con_foto),
+    respuesta: String(h.respuesta ?? ""), compras: Array.isArray(h.compras) ? h.compras.map((x) => txt(x, 200)).filter(Boolean) : [],
+    ...(h.fecha && !isNaN(new Date(h.fecha)) ? { fecha: h.fecha } : {}),
+  }));
+  const vistos = new Set(shop.map((s) => s.nombre.toLowerCase()));
+  const nuevasCompras = [];
+  for (const s of Array.isArray(d.compras) ? d.compras : []) {
+    const nombre = txt(s.nombre, 200), k = nombre.toLowerCase();
+    if (!nombre || vistos.has(k)) continue;
+    vistos.add(k); nuevasCompras.push({ botiquin_id: botiquinId, nombre, motivo: txt(s.motivo, 200) });
+  }
+  if (!nuevosMeds.length && !nuevasCons.length && !nuevasCompras.length) { status("dataStatus", "No encontré nada para importar.", true); return; }
+  if (meds.length && !confirm(`Ya tenés ${meds.length} medicamentos cargados. Si ya importaste antes, vas a tener duplicados. ¿Importar igual?`)) return;
+
+  $("btnImport").disabled = true; status("dataStatus", "Importando…");
+  const errores = [];
+  const ins = async (tabla, filas) => {
+    for (let i = 0; i < filas.length; i += 200) {
+      const { error } = await sb.from(tabla).insert(filas.slice(i, i + 200), { defaultToNull: false });
+      if (error) { errores.push(`${tabla}: ${error.message}`); return; }
+    }
+  };
+  await ins("medicamentos", nuevosMeds);
+  await ins("consultas", nuevasCons);
+  await ins("compras", nuevasCompras);
+  if (d.direccion && !botiquin()?.direccion) {
+    await sb.from("botiquines").update({ direccion: txt(d.direccion, 200) }).eq("id", botiquinId);
+    botiquin().direccion = txt(d.direccion, 200); $("addr").value = botiquin().direccion; updateMapLinks();
+  }
+  await Promise.all([cargarMeds(), cargarShop(), cargarHist()]);
+  $("btnImport").disabled = false;
+  if (errores.length) status("dataStatus", "Hubo errores: " + errores.join(" · "), true);
+  else { status("dataStatus", `Importé ${nuevosMeds.length} medicamentos, ${nuevasCons.length} consultas y ${nuevasCompras.length} compras.`); $("impTxt").value = ""; }
+};
+</script>
+</body>
+</html>
