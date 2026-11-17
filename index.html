@@ -116,6 +116,16 @@ p { margin: 0; }
 .hist summary .what { font-weight: 500; overflow-wrap: anywhere; }
 .hist .answer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .hist .row { margin-top: 8px; }
+/* Deslizar a la derecha para borrar una consulta */
+.swipe { position: relative; border-radius: 14px; overflow: hidden; }
+.swipe-bg { position: absolute; inset: 0; background: var(--bad); color: #fff; display: flex; align-items: center; gap: 8px; padding-left: 18px; font-weight: 700; opacity: .55; transition: opacity .15s; }
+.swipe.armed .swipe-bg { opacity: 1; }
+.swipe > .hist { position: relative; touch-action: pan-y; transition: transform .2s ease; }
+.swipe.dragging > .hist { transition: none; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 7; background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 12px 10px 16px; display: flex; gap: 12px; align-items: center; box-shadow: 0 6px 24px rgb(0 0 0 / .25); max-width: calc(100vw - 32px); }
+.toast span { white-space: nowrap; }
+.toast button { background: none; border: 0; color: var(--accent-soft); font-weight: 700; cursor: pointer; padding: 6px 8px; }
+@media (prefers-reduced-motion: reduce) { .swipe > .hist { transition: none; } }
 .status { font-size: 14px; color: var(--muted); }
 .status.bad { color: var(--bad); }
 .empty { text-align: center; padding: 28px 14px; color: var(--muted); display: grid; gap: 6px; }
@@ -262,7 +272,9 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
     <p class="muted">Esto es orientación, no un diagnóstico. Ante síntomas intensos, que empeoran o no se te van, consultá a un médico o farmacéutico. Emergencias: 112.</p>
     <h3 style="margin-top:10px">Consultas anteriores</h3>
     <p class="muted" id="histHint">Acá van a quedar guardadas tus consultas para que las puedas volver a ver. Solo las ves vos, aunque compartas el botiquín.</p>
+    <p class="muted" id="histSwipe" hidden>Deslizá una consulta hacia la derecha para borrarla.</p>
     <div class="list" id="hist"></div>
+    <div class="toast" id="toast" role="status" hidden><span id="toastTxt"></span><button type="button" id="toastBtn">Deshacer</button></div>
   </section>
 
   <!-- FARMACIAS -->
@@ -897,22 +909,81 @@ $("btnAsk").onclick = async () => {
 // ---------- Historial ----------
 function renderHist() {
   $("histHint").hidden = hist.length > 0;
-  $("hist").innerHTML = hist.map((h) => `<details class="card hist" data-hid="${esc(h.id)}">
-    <summary><span class="when">${esc(fmtWhen(h.fecha))}</span><span class="what">${esc(h.sintoma)}${h.con_foto ? " 📷" : ""}</span></summary>
-    <div class="answer">${md(h.respuesta || "")}</div>
-    ${h.compras?.length ? `<p class="muted" style="margin-top:8px">Para comprar: ${esc(h.compras.join(", "))}</p>` : ""}
-    <div class="row"><button class="btn small danger" type="button" data-hdel>Borrar consulta</button></div>
-  </details>`).join("");
+  $("histSwipe").hidden = hist.length === 0;
+  $("hist").innerHTML = hist.map((h) => `<div class="swipe" data-hid="${esc(h.id)}">
+    <div class="swipe-bg" aria-hidden="true">🗑 Borrar</div>
+    <details class="card hist">
+      <summary><span class="when">${esc(fmtWhen(h.fecha))}</span><span class="what">${esc(h.sintoma)}${h.con_foto ? " 📷" : ""}</span></summary>
+      <div class="answer">${md(h.respuesta || "")}</div>
+      ${h.compras?.length ? `<p class="muted" style="margin-top:8px">Para comprar: ${esc(h.compras.join(", "))}</p>` : ""}
+      <div class="row"><button class="btn small danger" type="button" data-hdel>Borrar consulta</button></div>
+    </details>
+  </div>`).join("");
+}
+
+// Borra en la nube y ofrece "Deshacer" unos segundos (vuelve a insertar la misma fila).
+let toastTimer = null;
+async function borrarConsulta(id) {
+  const fila = hist.find((h) => h.id === id); if (!fila) return;
+  hist = hist.filter((h) => h.id !== id); renderHist();
+  const { error } = await sb.from("consultas").delete().eq("id", id);
+  if (error) { note("No se pudo borrar: " + error.message, true); await cargarHist(); return; }
+  clearTimeout(toastTimer);
+  $("toastTxt").textContent = "Consulta borrada"; $("toast").hidden = false;
+  $("toastBtn").onclick = async () => {
+    $("toast").hidden = true; clearTimeout(toastTimer);
+    const { error: e2 } = await sb.from("consultas").insert(fila);
+    if (e2) note("No se pudo recuperar: " + e2.message, true);
+    await cargarHist();
+  };
+  toastTimer = setTimeout(() => { $("toast").hidden = true; }, 6000);
 }
 $("hist").addEventListener("click", (e) => {
   if (!e.target.matches("[data-hdel]")) return;
   const id = e.target.closest("[data-hid]").dataset.hid;
-  confirmar(e.target, "¿Seguro? Borrar", async () => {
-    const { error } = await sb.from("consultas").delete().eq("id", id);
-    if (error) note("No se pudo borrar: " + error.message, true);
-    await cargarHist();
-  });
+  confirmar(e.target, "¿Seguro? Borrar", () => borrarConsulta(id));
 });
+
+// Deslizar a la derecha: más de 35 % del ancho borra; menos, vuelve a su lugar.
+{
+  let d = null, sinClick = false;
+  const lista = $("hist");
+  lista.addEventListener("pointerdown", (e) => {
+    const sw = e.target.closest(".swipe");
+    if (!sw || (e.pointerType === "mouse" && e.button !== 0) || e.target.closest("button")) return;
+    d = { sw, card: sw.querySelector(".hist"), x0: e.clientX, y0: e.clientY, dx: 0, activo: false, pid: e.pointerId };
+  });
+  lista.addEventListener("pointermove", (e) => {
+    if (!d || e.pointerId !== d.pid) return;
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (!d.activo) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { d = null; return; } // scroll vertical
+      if (dx < 12) return;
+      d.activo = true; d.sw.classList.add("dragging");
+      try { d.sw.setPointerCapture(d.pid); } catch {}
+    }
+    d.dx = Math.max(0, dx);
+    d.card.style.transform = `translateX(${d.dx}px)`;
+    d.sw.classList.toggle("armed", d.dx > d.sw.offsetWidth * 0.35);
+  });
+  const soltar = (e) => {
+    if (!d || e.pointerId !== d.pid) return;
+    const { sw, card, dx, activo } = d; d = null;
+    if (!activo) return;
+    sinClick = true; setTimeout(() => sinClick = false, 0);
+    sw.classList.remove("dragging");
+    if (e.type === "pointerup" && dx > sw.offsetWidth * 0.35) {
+      card.style.transform = "translateX(110%)";
+      setTimeout(() => borrarConsulta(sw.dataset.hid), 180);
+    } else {
+      card.style.transform = ""; sw.classList.remove("armed");
+    }
+  };
+  lista.addEventListener("pointerup", soltar);
+  lista.addEventListener("pointercancel", soltar);
+  // Que soltar después de arrastrar no abra/cierre la consulta.
+  lista.addEventListener("click", (e) => { if (sinClick) { e.preventDefault(); e.stopPropagation(); } }, true);
+}
 
 // ---------- Farmacias ----------
 function updateMapLinks(coords) {
