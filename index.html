@@ -7,7 +7,11 @@
 <meta name="description" content="Inventario del botiquín de casa, consultas de síntomas y farmacias cerca.">
 <meta name="theme-color" content="#f6f8f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101816" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='5' width='20' height='16' rx='3' fill='%230e7c6b'/%3E%3Cpath d='M12 9v8M8 13h8' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="icons/icono.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Botiquín">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap">
 <style>
@@ -168,6 +172,7 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
 .dlg textarea { width: 100%; min-height: 90px; font: 12px/1.4 ui-monospace, monospace; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
 .dlg .inline { display: flex; gap: 8px; }
 .dlg .inline input { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.familia { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .dlg-hdr { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 @media (prefers-reduced-motion: no-preference) { .pulse { animation: pulse 1.2s ease-in-out infinite; } }
 @keyframes pulse { 50% { opacity: .5; } }
@@ -347,13 +352,13 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
         <label for="nombreBotiquin">Nombre</label>
         <div class="inline"><input id="nombreBotiquin" maxlength="80"><button class="btn small" id="btnRenombrar" type="button">Guardar</button></div>
       </div>
-      <p class="muted" id="miembros"></p>
     </div>
 
     <div class="blk">
-      <h3>Compartir</h3>
-      <p class="muted">Generá un enlace para que otra persona use este mismo botiquín con su cuenta de Google. Vale 7 días. Las consultas de síntomas siguen siendo privadas de cada uno.</p>
-      <div class="row"><button class="btn small" id="btnInvitar" type="button">Crear enlace de invitación</button></div>
+      <h3>Familia</h3>
+      <ul class="familia" id="miembros"></ul>
+      <p class="muted">Invitá a tu familia para que vean y editen este mismo botiquín desde su teléfono, entrando con su cuenta de Google. El enlace vale 7 días. Las consultas de síntomas son privadas de cada uno.</p>
+      <div class="row"><button class="btn small primary" id="btnInvitar" type="button">Invitar a alguien de la familia</button></div>
       <div class="inline" id="invWrap" hidden><input id="invLink" readonly><button class="btn small" id="btnCopyInv" type="button">Copiar</button></div>
       <div class="field">
         <label for="codUnirse">¿Te pasaron un código?</label>
@@ -643,6 +648,9 @@ async function cambiarBotiquin(id) {
   $("drafts").innerHTML = "";
   await Promise.all([cargarMeds(), cargarShop(), cargarHist()]);
   suscribir();
+  // En el encabezado: "Mi casa · 2 personas" cuando lo comparte la familia.
+  const { count } = await sb.from("miembros").select("user_id", { count: "exact", head: true }).eq("botiquin_id", id);
+  if (botiquinId === id) note(count > 1 ? `${b.nombre} · ${count} personas` : b.nombre);
 }
 
 // Cambios en otros dispositivos: Realtime + recarga al volver a la app.
@@ -1067,10 +1075,11 @@ $("btnCuenta").onclick = async () => {
   status("claveStatus", "");
   dlg.showModal();
   const uid = user.id;
-  const { data } = await sb.from("miembros").select("email, user_id").eq("botiquin_id", botiquinId);
+  $("miembros").innerHTML = "";
+  const { data } = await sb.from("miembros").select("nombre, email, user_id, rol").eq("botiquin_id", botiquinId).order("created_at");
   if (!user) return; // cerró sesión mientras cargaba
-  const otros = (data || []).filter((m) => m.user_id !== uid).map((m) => m.email || "otra cuenta");
-  $("miembros").textContent = otros.length ? "Lo compartís con: " + otros.join(", ") : "Solo lo usás vos.";
+  $("miembros").innerHTML = (data || []).map((m) => `<li><b>${esc(m.nombre || m.email || "Otra cuenta")}</b>${m.user_id === uid ? " (vos)" : ""}${m.nombre && m.email ? ` <span class="muted">· ${esc(m.email)}</span>` : ""}</li>`).join("")
+    + ((data || []).length < 2 ? `<li class="muted">Por ahora solo lo usás vos.</li>` : "");
 };
 $("selBotiquin").onchange = async () => { dlg.close(); await cambiarBotiquin($("selBotiquin").value); };
 $("btnRenombrar").onclick = async () => {
@@ -1085,8 +1094,8 @@ $("btnInvitar").onclick = async () => {
   if (error) { status("shareStatus", "No se pudo crear la invitación.", true); return; }
   const link = `${location.origin}${location.pathname}?unirse=${encodeURIComponent(data)}`;
   $("invLink").value = link; $("invWrap").hidden = false;
-  status("shareStatus", `Código: ${data}. Mandale el enlace; tiene que entrar con su cuenta de Google.`);
-  if (navigator.share) navigator.share({ title: "Botiquín", text: "Te invito a mi botiquín", url: link }).catch(() => {});
+  status("shareStatus", `Mandale el enlace por WhatsApp. Al abrirlo y entrar con su cuenta de Google ya ve este botiquín. (Código: ${data})`);
+  if (navigator.share) navigator.share({ title: "Botiquín", text: "Te invito a nuestro botiquín de casa. Abrí el enlace y entrá con tu cuenta de Google:", url: link }).catch(() => {});
 };
 $("btnCopyInv").onclick = async () => {
   try { await navigator.clipboard.writeText($("invLink").value); $("btnCopyInv").textContent = "Copiado"; }
@@ -1178,9 +1187,10 @@ $("btnImport").onclick = async () => {
 // ---------- Actualizar la app ----------
 // GitHub Pages deja el código en caché unos minutos. "Actualizar" lo baja de nuevo sin caché y recarga.
 const ARCHIVOS_APP = [location.pathname, "./config.js"];
+const ICONOS_APP = ["./manifest.webmanifest", "./icons/apple-touch-icon.png", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icono.svg"];
 async function actualizarApp() {
   document.querySelectorAll("[data-actualizar]").forEach((b) => { b.disabled = true; b.textContent = "Actualizando…"; });
-  await Promise.all(ARCHIVOS_APP.map((u) => fetch(u, { cache: "reload" }).catch(() => {})));
+  await Promise.all([...ARCHIVOS_APP, ...ICONOS_APP].map((u) => fetch(u, { cache: "reload" }).catch(() => {})));
   location.reload();
 }
 document.addEventListener("click", (e) => { if (e.target.closest("[data-actualizar]")) actualizarApp(); });
