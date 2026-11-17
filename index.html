@@ -180,15 +180,13 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
       Entrar con Google
     </button>
     <div class="sep muted">o con tu email</div>
-    <form id="fEmail" class="otp">
-      <input id="email" type="email" required autocomplete="email" placeholder="tu@gmail.com" aria-label="Email">
-      <button class="btn primary" type="submit">Mandarme un link para entrar</button>
+    <form id="fClave" class="otp">
+      <input id="email" type="email" required autocomplete="username" placeholder="tu@gmail.com" aria-label="Email">
+      <input id="clave" type="password" required minlength="8" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña">
+      <button class="btn primary" type="submit" value="entrar">Entrar</button>
+      <button class="btn" type="submit" value="crear">Crear cuenta nueva</button>
     </form>
-    <form id="fCodigo" class="otp" hidden>
-      <input id="codigo" inputmode="numeric" autocomplete="one-time-code" required maxlength="10" placeholder="Código (si el email trae uno)" aria-label="Código">
-      <button class="btn primary" type="submit">Entrar</button>
-      <button class="btn small" type="button" id="btnOtroEmail">Usar otro email</button>
-    </form>
+    <button class="btn small" type="button" id="btnLink" style="justify-self:center">Olvidé mi contraseña</button>
     <p class="status" id="loginStatus" aria-live="polite"></p>
   </div>
 </div>
@@ -346,6 +344,15 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
     </div>
 
     <div class="blk">
+      <h3>Contraseña</h3>
+      <form class="inline" id="fNuevaClave">
+        <input id="nuevaClave" type="password" minlength="8" required autocomplete="new-password" placeholder="Nueva contraseña (mín. 8)" aria-label="Nueva contraseña">
+        <button class="btn small" type="submit">Cambiar</button>
+      </form>
+      <p class="status" id="claveStatus" aria-live="polite"></p>
+    </div>
+
+    <div class="blk">
       <div class="row"><button class="btn danger" id="btnSalir" type="button">Cerrar sesión</button></div>
     </div>
   </div>
@@ -455,33 +462,47 @@ $("btnGoogle").onclick = async () => {
   }
 };
 
-// Entrar con un código que llega por email (funciona con cualquier email, Gmail incluido).
-let emailOtp = "";
-$("fEmail").addEventListener("submit", async (e) => {
+// Email + contraseña: entra directo, sin mandar ningún email.
+$("fClave").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const btn = e.target.querySelector("button"); btn.disabled = true;
-  emailOtp = $("email").value.trim().toLowerCase();
-  status("loginStatus", "Mandando el email…");
-  const { error } = await sb.auth.signInWithOtp({ email: emailOtp, options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname } });
-  btn.disabled = false;
+  const crear = e.submitter?.value === "crear";
+  const email = $("email").value.trim().toLowerCase(), password = $("clave").value;
+  const btns = [...e.target.querySelectorAll("button")]; btns.forEach((b) => b.disabled = true);
+  status("loginStatus", crear ? "Creando la cuenta…" : "Entrando…");
+  const { data, error } = crear
+    ? await sb.auth.signUp({ email, password })
+    : await sb.auth.signInWithPassword({ email, password });
+  btns.forEach((b) => b.disabled = false);
+  if (error) {
+    const m = error.message || "";
+    status("loginStatus",
+      /invalid login credentials/i.test(m) ? "Email o contraseña incorrectos. Si es tu primera vez, tocá «Crear cuenta nueva»."
+      : /already registered|already exists/i.test(m) ? "Ese email ya tiene cuenta: tocá «Entrar»."
+      : /password/i.test(m) && /least|short|weak|characters/i.test(m) ? "La contraseña tiene que tener al menos 8 caracteres."
+      : /rate limit|too many/i.test(m) ? "Demasiados intentos seguidos. Esperá unos minutos."
+      : "No se pudo: " + m, true);
+    return;
+  }
+  if (crear && !data.session) status("loginStatus", "Cuenta creada, pero hay que confirmarla por email. Revisá tu correo.");
+  else status("loginStatus", "");
+});
+
+// Alternativa sin contraseña: link por email (el plan gratis de Supabase manda pocos por hora).
+$("btnLink").onclick = async () => {
+  const email = $("email").value.trim().toLowerCase();
+  if (!email || !$("email").checkValidity()) { status("loginStatus", "Escribí tu email arriba y volvé a tocar.", true); $("email").focus(); return; }
+  $("btnLink").disabled = true; status("loginStatus", "Mandando el email…");
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } });
+  $("btnLink").disabled = false;
   if (error) {
     status("loginStatus", /rate limit|security purposes/i.test(error.message)
-      ? "Pediste muchos emails seguidos. Esperá unos minutos y probá de nuevo."
+      ? "Se mandaron muchos emails en poco tiempo. Esperá una hora o entrá con contraseña."
+      : /not found|signups not allowed/i.test(error.message) ? "No hay cuenta con ese email. Creala con «Crear cuenta nueva»."
       : "No se pudo mandar el email: " + error.message, true);
     return;
   }
-  $("fEmail").hidden = true; $("fCodigo").hidden = false; $("codigo").value = ""; $("codigo").focus();
-  status("loginStatus", `Te mandé un email a ${emailOtp}. Tocá el link desde este dispositivo (mirá también en spam).`);
-});
-$("fCodigo").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
-  const token = $("codigo").value.replace(/\D/g, "");
-  const { error } = await sb.auth.verifyOtp({ email: emailOtp, token, type: "email" });
-  btn.disabled = false;
-  if (error) status("loginStatus", "El código no es correcto o venció. Pedí otro.", true);
-});
-$("btnOtroEmail").onclick = () => { $("fCodigo").hidden = true; $("fEmail").hidden = false; status("loginStatus", ""); };
+  status("loginStatus", `Te mandé un link a ${email}. Abrilo desde este dispositivo y después poné una contraseña nueva en Cuenta.`);
+};
 
 let arrancando = false;
 sb.auth.onAuthStateChange((evento, session) => {
@@ -497,7 +518,7 @@ function mostrarLogin() {
   if (canal) { sb.removeChannel(canal); canal = null; }
   $("app").hidden = true; $("tabs").hidden = true; $("btnCuenta").hidden = true;
   $("login").hidden = false; $("btnGoogle").disabled = false; status("loginStatus", "");
-  $("fCodigo").hidden = true; $("fEmail").hidden = false;
+  $("clave").value = "";
   note("");
 }
 
@@ -914,9 +935,12 @@ $("btnCuenta").onclick = async () => {
   $("selBotiquin").innerHTML = botiquines.map((b) => `<option value="${esc(b.id)}" ${b.id === botiquinId ? "selected" : ""}>${esc(b.nombre)}</option>`).join("");
   $("nombreBotiquin").value = botiquin()?.nombre || "";
   $("invWrap").hidden = true; status("shareStatus", ""); status("dataStatus", "");
+  status("claveStatus", "");
   dlg.showModal();
+  const uid = user.id;
   const { data } = await sb.from("miembros").select("email, user_id").eq("botiquin_id", botiquinId);
-  const otros = (data || []).filter((m) => m.user_id !== user.id).map((m) => m.email || "otra cuenta");
+  if (!user) return; // cerró sesión mientras cargaba
+  const otros = (data || []).filter((m) => m.user_id !== uid).map((m) => m.email || "otra cuenta");
   $("miembros").textContent = otros.length ? "Lo compartís con: " + otros.join(", ") : "Solo lo usás vos.";
 };
 $("selBotiquin").onchange = async () => { dlg.close(); await cambiarBotiquin($("selBotiquin").value); };
@@ -947,6 +971,12 @@ $("btnUnirse").onclick = async () => {
   await cargarBotiquines(); dlg.close(); await cambiarBotiquin(data);
   note("Te uniste a " + botiquin().nombre);
 };
+$("fNuevaClave").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const { error } = await sb.auth.updateUser({ password: $("nuevaClave").value });
+  if (error) { status("claveStatus", "No se pudo cambiar: " + error.message, true); return; }
+  $("nuevaClave").value = ""; status("claveStatus", "Contraseña cambiada.");
+});
 $("btnSalir").onclick = async () => { dlg.close(); await sb.auth.signOut(); mostrarLogin(); };
 
 // Exportar / importar

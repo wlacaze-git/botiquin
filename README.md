@@ -5,11 +5,11 @@ App para llevar el inventario del botiquín de casa, consultar síntomas contra 
 **App:** <https://wlacaze-git.github.io/botiquin/>
 
 - **Página**: `index.html` + `config.js`, estática, publicada en GitHub Pages. Sin paso de build.
-- **Datos y login**: Supabase (Postgres + Auth). Se entra con un link por email y, cuando esté configurado, con Google. Cada usuario ve solo sus botiquines (Row Level Security).
+- **Datos y login**: Supabase (Postgres + Auth). Se entra con email y contraseña (sin email de confirmación) y, cuando esté configurado, con Google. "Olvidé mi contraseña" manda un link por email. Cada usuario ve solo sus botiquines (Row Level Security).
 - **IA**: la Edge Function `asistente` llama a la API de DeepSeek. La clave está solo en la función, como secreto.
 
 ```
-GitHub Pages (index.html)  ──►  Supabase Auth (email / Google)
+GitHub Pages (index.html)  ──►  Supabase Auth (email+contraseña / Google)
           │
           ├──► Supabase Postgres (tablas + RLS)
           └──► Edge Function "asistente" ──► API de DeepSeek
@@ -79,9 +79,9 @@ Funciones RPC: `mi_botiquin()` (devuelve tus botiquines y crea uno la primera ve
    ```
    Después: `npx supabase config push`, y en `config.js` poné `LOGIN_GOOGLE = true`.
 
-### Login por email: límites del plan gratis
+### Login con email y contraseña
 
-El servidor de correo que trae Supabase en el plan gratis manda pocos emails por hora y solo a los miembros del equipo de la organización de Supabase. Para que entren otras personas, activá Google o configurá un SMTP propio (por ejemplo Resend, que tiene plan gratis) en **Authentication → Emails → SMTP Settings**.
+La confirmación por email está desactivada (`enable_confirmations = false` en `supabase/config.toml`): al crear la cuenta se entra directo. El servidor de correo del plan gratis manda muy pocos emails por hora y solo a los miembros del equipo de Supabase, así que "Olvidé mi contraseña" sirve de emergencia. Para algo más robusto, configurá un SMTP propio (por ejemplo Resend, con plan gratis) en **Authentication → Emails → SMTP Settings**.
 
 ## Pasar los datos de la versión anterior
 

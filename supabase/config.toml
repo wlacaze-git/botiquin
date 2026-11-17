@@ -9,4 +9,9 @@ verify_jwt = true
 # URL pública de la app (GitHub Pages) y adónde puede volver Google después del login.
 site_url = "https://wlacaze-git.github.io/botiquin/"
 additional_redirect_urls = ["https://wlacaze-git.github.io/botiquin/", "http://localhost:8000/"]
+minimum_password_length = 8
+
+[auth.email]
+# Sin email de confirmación: con email + contraseña se entra directo (el plan gratis manda muy pocos emails).
+enable_confirmations = false
 
