@@ -15,3 +15,9 @@ minimum_password_length = 8
 # Sin email de confirmación: con email + contraseña se entra directo (el plan gratis manda muy pocos emails).
 enable_confirmations = false
 
+
+[auth.external.google]
+# Credenciales en .env.local (no se suben). Cliente OAuth "Web application" en Google Cloud.
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
