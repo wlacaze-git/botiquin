@@ -1,0 +1,613 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Botiquín</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap">
+<style>
+/* Layout: one-screen phone app. Sticky header, scrolling content, fixed bottom tab bar. */
+:root {
+  --bg: #f6f8f7;
+  --surface: #ffffff;
+  --fg: #172322;
+  --muted: #5d6c6a;
+  --line: #d9e1df;
+  --accent: #0e7c6b;
+  --accent-ink: #ffffff;
+  --accent-soft: #dff1ec;
+  --ok: #2b8a4b;
+  --warn: #b7791f;
+  --warn-soft: #fbf0d9;
+  --bad: #c0392b;
+  --bad-soft: #fbe3e0;
+  --display: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+  --body: "DM Sans", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101816; --surface: #192321; --fg: #e8eeec; --muted: #9bb0ac; --line: #2a3835;
+    --accent: #4fc3ad; --accent-ink: #0b1a17; --accent-soft: #163631;
+    --ok: #5fcf85; --warn: #e0b45b; --warn-soft: #3a2f16; --bad: #ef7d70; --bad-soft: #3f1f1b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101816; --surface: #192321; --fg: #e8eeec; --muted: #9bb0ac; --line: #2a3835;
+  --accent: #4fc3ad; --accent-ink: #0b1a17; --accent-soft: #163631;
+  --ok: #5fcf85; --warn: #e0b45b; --warn-soft: #3a2f16; --bad: #ef7d70; --bad-soft: #3f1f1b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 var(--body); }
+button, input, textarea, select { font: inherit; color: inherit; }
+header {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  padding-block: 12px 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+}
+header h1 { margin: 0; font: 700 24px/1.1 var(--display); letter-spacing: -0.01em; }
+header .sub { color: var(--muted); font-size: 13px; }
+main {
+  padding-block: 16px 96px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 640px; margin: 0 auto;
+}
+section[data-tab] { display: grid; gap: 14px; }
+h2 { margin: 0; font: 700 20px/1.2 var(--display); text-wrap: balance; }
+p { margin: 0; }
+.muted { color: var(--muted); font-size: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.stat b { display: block; font: 700 24px/1 var(--display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.stat.bad b { color: var(--bad); } .stat.warn b { color: var(--warn); }
+.search { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.list { display: grid; gap: 10px; }
+.med { display: grid; grid-template-columns: 6px 1fr auto; gap: 12px; align-items: start; padding: 12px 12px 12px 0; overflow: hidden; }
+.med .stripe { align-self: stretch; border-radius: 0 3px 3px 0; background: var(--ok); }
+.med.warn .stripe { background: var(--warn); } .med.bad .stripe { background: var(--bad); }
+.med .body { min-width: 0; display: grid; gap: 3px; }
+.med .name { font-weight: 700; }
+.med .meta { font-size: 13px; color: var(--muted); }
+.med .uso { font-size: 14px; }
+.chip { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--fg); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chip.warn { background: var(--warn-soft); } .chip.bad { background: var(--bad-soft); }
+.med .acts { display: grid; gap: 6px; padding-right: 12px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 500; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.field input, .field textarea, .field select { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.field textarea { min-height: 90px; resize: vertical; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
+.drop { border: 2px dashed var(--line); border-radius: 14px; padding: 22px 14px; text-align: center; display: grid; gap: 8px; justify-items: center; background: var(--surface); }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.answer { white-space: pre-wrap; line-height: 1.5; }
+.answer:empty { display: none; }
+.answer strong { color: var(--accent); font-weight: 700; }
+.hist summary { cursor: pointer; display: grid; gap: 2px; }
+.hist summary .when { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.hist summary .what { font-weight: 500; }
+.hist .answer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.hist .row { margin-top: 8px; }
+.status { font-size: 14px; color: var(--muted); }
+.empty { text-align: center; padding: 28px 14px; color: var(--muted); display: grid; gap: 6px; }
+.empty b { color: var(--fg); font-family: var(--display); font-size: 18px; }
+.banner { background: var(--warn-soft); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  background: var(--surface); border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+}
+nav.tabs button { background: none; border: 0; padding: 10px 4px 8px; display: grid; justify-items: center; gap: 2px; font-size: 11px; color: var(--muted); cursor: pointer; }
+nav.tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; }
+.links { display: grid; gap: 10px; }
+.links a { display: block; padding: 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--fg); text-decoration: none; font-weight: 500; }
+.links a span { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .pulse { animation: pulse 1.2s ease-in-out infinite; } }
+@keyframes pulse { 50% { opacity: .5; } }
+</style>
+
+<header>
+  <h1>Botiquín</h1>
+  <div class="sub" id="hdrSub">Tu casa</div>
+</header>
+
+<main>
+  <!-- INVENTARIO -->
+  <section data-tab="lista">
+    <div class="stats">
+      <div class="stat"><b id="stTotal">0</b><span>Medicamentos</span></div>
+      <div class="stat warn"><b id="stSoon">0</b><span>Vencen pronto</span></div>
+      <div class="stat bad"><b id="stExp">0</b><span>Vencidos</span></div>
+    </div>
+    <input class="search" id="q" type="search" placeholder="Buscar por nombre, principio activo o uso…" autocomplete="off">
+    <div class="list" id="list"></div>
+    <div class="empty" id="emptyList">
+      <b>Todavía no hay nada cargado</b>
+      <p>Andá a <b>Agregar</b>, sacale una foto a la caja y listo.</p>
+    </div>
+  </section>
+
+  <!-- AGREGAR -->
+  <section data-tab="agregar" hidden>
+    <h2>Agregar medicamentos</h2>
+    <p class="muted">Sacá una foto a la caja (de frente y, si podés, al lado donde está el vencimiento). Podés mandar varias cajas de una.</p>
+    <div class="drop" id="drop">
+      <input type="file" id="photos" accept="image/*" multiple capture="environment" hidden>
+      <button class="btn primary" id="btnCam" type="button">Sacar foto / elegir imágenes</button>
+      <p class="muted" id="photoHint">También podés arrastrar fotos acá.</p>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="btnRead" type="button" disabled>Leer las cajas</button>
+      <button class="btn" id="btnStop1" type="button" hidden>Detener</button>
+      <button class="btn" id="btnManual" type="button">Cargar a mano</button>
+    </div>
+    <p class="status" id="readStatus"></p>
+    <div id="drafts" class="list"></div>
+  </section>
+
+  <!-- CONSULTAR -->
+  <section data-tab="consultar" hidden>
+    <h2>¿Qué te pasa?</h2>
+    <p class="muted">Contame el síntoma (o mandá una foto, por ejemplo de una picadura o una receta) y reviso qué tenés en casa.</p>
+    <div class="field">
+      <label for="sym">Síntomas</label>
+      <textarea id="sym" placeholder="Ej: me duele la cabeza desde la mañana y tengo un poco de fiebre"></textarea>
+    </div>
+    <div class="row">
+      <input type="file" id="symPhoto" accept="image/*" capture="environment" hidden>
+      <button class="btn" id="btnSymPhoto" type="button">Adjuntar foto</button>
+      <span class="muted" id="symPhotoName"></span>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="btnAsk" type="button">Revisar mi botiquín</button>
+      <button class="btn" id="btnStop2" type="button" hidden>Detener</button>
+    </div>
+    <p class="status" id="askStatus"></p>
+    <div class="card answer" id="answer"></div>
+    <p class="muted">Esto es orientación, no un diagnóstico. Ante síntomas intensos, que empeoran o no se te van, consultá a un médico o farmacéutico. Emergencias: 112.</p>
+    <h2 style="font-size:17px;margin-top:10px">Consultas anteriores</h2>
+    <p class="muted" id="histHint">Acá van a quedar guardadas tus consultas para que las puedas volver a ver.</p>
+    <div class="list" id="hist"></div>
+  </section>
+
+  <!-- FARMACIAS -->
+  <section data-tab="farmacias" hidden>
+    <h2>Farmacias cerca</h2>
+    <p class="muted">Se abren en tu app de mapas con tu ubicación. El stock de un medicamento concreto hay que confirmarlo llamando.</p>
+    <div class="row">
+      <button class="btn primary" id="btnGeo" type="button">Buscar farmacias donde estoy</button>
+      <span class="muted" id="geoStatus"></span>
+    </div>
+    <details>
+      <summary class="muted">Buscar alrededor de otra dirección</summary>
+      <div class="field" style="margin-top:8px">
+        <label for="addr">Dirección (calle y ciudad)</label>
+        <input id="addr" type="text" placeholder="Ej: Calle Mayor 10, Madrid" autocomplete="street-address">
+      </div>
+    </details>
+    <div class="links">
+      <a id="lnkOpen" href="https://www.google.com/maps/search/farmacia+abierta+ahora+cerca+de+mi/" target="_blank" rel="noopener">Farmacias abiertas ahora <span>Google Maps</span></a>
+      <a id="lnkGuard" href="https://www.google.com/maps/search/farmacia+de+guardia+24+horas+cerca+de+mi/" target="_blank" rel="noopener">Farmacias de guardia (24 h) <span>Google Maps</span></a>
+      <a id="lnkApple" href="https://maps.apple.com/?q=farmacia+cerca+de+mi" target="_blank" rel="noopener">Farmacias en Apple Maps <span>Si usás iPhone</span></a>
+      <a href="https://www.farmaciasdeguardia.org/" target="_blank" rel="noopener">Farmacias de guardia por localidad <span>Calendario oficial de guardias en España</span></a>
+    </div>
+    <div class="card">
+      <h2 style="font-size:17px">Lista para la farmacia</h2>
+      <p class="muted" id="shopHint">Cuando consultes un síntoma y no tengas nada en casa, lo que te sugiera comprar aparece acá.</p>
+      <div class="list" id="shop"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn small" id="btnCopyShop" type="button" hidden>Copiar lista</button>
+        <button class="btn small" id="btnClearShop" type="button" hidden>Vaciar</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-go="lista" aria-selected="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M12 11v5M9.5 13.5h5"/></svg>Botiquín</button>
+  <button role="tab" data-go="agregar" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Agregar</button>
+  <button role="tab" data-go="consultar" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg>Consultar</button>
+  <button role="tab" data-go="farmacias" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><path d="M12 7v6M9 10h6"/></svg>Farmacias</button>
+</nav>
+
+<script>
+(() => {
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+// ---------- Tabs ----------
+const tabs = [...document.querySelectorAll("nav.tabs button")];
+function go(name) {
+  document.querySelectorAll("section[data-tab]").forEach((s) => s.hidden = s.dataset.tab !== name);
+  tabs.forEach((b) => b.setAttribute("aria-selected", String(b.dataset.go === name)));
+  window.scrollTo(0, 0);
+  try { localStorage.setItem("botiquin.tab", name); } catch {}
+}
+tabs.forEach((b) => b.onclick = () => go(b.dataset.go));
+try { const t = localStorage.getItem("botiquin.tab"); if (t && t !== "lista") go(t); } catch {}
+
+// ---------- Fechas ----------
+const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+function expiryEnd(v) { // "YYYY-MM" o "YYYY-MM-DD" -> Date del último momento válido
+  if (!v) return null;
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(v);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2];
+  if (m[3]) return new Date(y, mo - 1, +m[3], 23, 59, 59);
+  return new Date(y, mo, 0, 23, 59, 59); // último día del mes
+}
+function fmtExp(v) {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(v || "");
+  if (!m) return v || "sin fecha";
+  return (m[3] ? +m[3] + " " : "") + MONTHS[+m[2] - 1] + " " + m[1];
+}
+function expState(v) {
+  const end = expiryEnd(v);
+  if (!end) return { cls: "", label: "sin fecha" };
+  const days = Math.ceil((end - Date.now()) / 86400000);
+  if (days < 0) return { cls: "bad", label: "Vencido " + fmtExp(v) };
+  if (days <= 60) return { cls: "warn", label: "Vence " + fmtExp(v) };
+  return { cls: "", label: "Vence " + fmtExp(v) };
+}
+
+// ---------- Almacenamiento (db compartida, con respaldo local) ----------
+let meds = [];           // {id, nombre, principio, presentacion, cantidad, vencimiento, uso, receta, notas}
+let shop = [];           // [{id, nombre, motivo}]
+let hist = [];           // [{id, fecha, sintoma, respuesta, compras}]
+let db = null, store = null, histStore = null;
+const LS_KEY = "botiquin.meds", LS_SHOP = "botiquin.shop", LS_HIST = "botiquin.hist";
+function loadLocal() {
+  try { meds = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { meds = []; }
+  try { shop = JSON.parse(localStorage.getItem(LS_SHOP) || "[]"); } catch { shop = []; }
+  try { hist = JSON.parse(localStorage.getItem(LS_HIST) || "[]"); } catch { hist = []; }
+}
+function saveLocal() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(meds)); localStorage.setItem(LS_SHOP, JSON.stringify(shop)); localStorage.setItem(LS_HIST, JSON.stringify(hist.slice(0, 100))); } catch {}
+}
+async function putHist(h) {
+  hist.unshift(h); renderHist();
+  if (histStore) { try { await histStore.doc(h.id).set(h); } catch {} } else saveLocal();
+}
+async function delHist(id) {
+  hist = hist.filter((x) => x.id !== id); renderHist();
+  if (histStore) { try { await histStore.doc(id).delete(); } catch {} } else saveLocal();
+}
+async function putMed(m) {
+  const i = meds.findIndex((x) => x.id === m.id);
+  if (i >= 0) meds[i] = m; else meds.push(m);
+  render();
+  if (store) { try { await store.doc(m.id).set(m); } catch (e) { note("No se pudo guardar en la nube: " + e.code, true); } }
+  else saveLocal();
+}
+async function delMed(id) {
+  meds = meds.filter((x) => x.id !== id);
+  render();
+  if (store) { try { await store.doc(id).delete(); } catch (e) { note("No se pudo borrar: " + e.code, true); } }
+  else saveLocal();
+}
+async function saveShop() {
+  renderShop();
+  if (db) { try { await db.doc("config/compras").set({ items: shop }); } catch {} }
+  else saveLocal();
+}
+function note(msg, bad) { $("hdrSub").textContent = msg; $("hdrSub").style.color = bad ? "var(--bad)" : ""; }
+
+loadLocal(); render(); renderShop(); renderHist();
+const dbInit = (async () => {
+  db = await window.claude?.use?.("db");
+  if (!db) { note("Guardado en este teléfono"); return; }
+  store = db.collection("medicamentos");
+  note("Sincronizado");
+  store.onSnapshot((snap) => {
+    meds = snap.docs.filter((d) => d.exists).map((d) => d.data());
+    render();
+  }, (e) => { note("Sin conexión con la nube (" + e.code + ")", true); store = null; });
+  db.doc("config/compras").onSnapshot((snap) => { if (snap.exists) { shop = snap.data().items || []; renderShop(); } }, () => {});
+  histStore = db.collection("consultas");
+  histStore.orderBy("fecha", "desc").limit(100).onSnapshot((snap) => {
+    hist = snap.docs.filter((d) => d.exists).map((d) => d.data());
+    renderHist();
+  }, () => { histStore = null; });
+})();
+
+// ---------- Render inventario ----------
+function sorted() {
+  return [...meds].sort((a, b) => {
+    const ea = expiryEnd(a.vencimiento), eb = expiryEnd(b.vencimiento);
+    return (ea ? ea.getTime() : 8e15) - (eb ? eb.getTime() : 8e15);
+  });
+}
+function render() {
+  const q = ($("q").value || "").toLowerCase().trim();
+  const items = sorted().filter((m) => !q || [m.nombre, m.principio, m.uso, m.presentacion].join(" ").toLowerCase().includes(q));
+  let soon = 0, exp = 0;
+  meds.forEach((m) => { const s = expState(m.vencimiento).cls; if (s === "bad") exp++; else if (s === "warn") soon++; });
+  $("stTotal").textContent = meds.length; $("stSoon").textContent = soon; $("stExp").textContent = exp;
+  $("emptyList").hidden = meds.length > 0;
+  $("list").innerHTML = items.map((m) => {
+    const s = expState(m.vencimiento);
+    return `<div class="card med ${s.cls}" data-id="${esc(m.id)}">
+      <div class="stripe"></div>
+      <div class="body">
+        <div class="name">${esc(m.nombre)}</div>
+        <div class="meta">${esc([m.principio, m.presentacion, m.cantidad].filter(Boolean).join(" · "))}${m.receta ? " · con receta" : ""}</div>
+        <div class="uso">${esc(m.uso || "")}</div>
+        <div><span class="chip ${s.cls}">${esc(s.label)}</span></div>
+      </div>
+      <div class="acts">
+        <button class="btn small" data-edit>Editar</button>
+        <button class="btn small danger" data-del>Borrar</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+$("q").addEventListener("input", render);
+$("list").addEventListener("click", (e) => {
+  const card = e.target.closest(".med"); if (!card) return;
+  const m = meds.find((x) => x.id === card.dataset.id); if (!m) return;
+  if (e.target.matches("[data-del]")) {
+    if (e.target.dataset.sure) { delMed(m.id); }
+    else { e.target.dataset.sure = "1"; e.target.textContent = "¿Seguro? Borrar"; setTimeout(() => { delete e.target.dataset.sure; e.target.textContent = "Borrar"; }, 3000); }
+  }
+  if (e.target.matches("[data-edit]")) { openDraft({ ...m }); go("agregar"); }
+});
+
+// ---------- Borradores (formulario) ----------
+function draftForm(m) {
+  const id = m.id || uid();
+  return `<form class="card field" data-draft="${id}" style="gap:10px">
+    <div class="grid2">
+      <div class="field"><label>Nombre comercial</label><input name="nombre" required value="${esc(m.nombre)}"></div>
+      <div class="field"><label>Principio activo y dosis</label><input name="principio" value="${esc(m.principio)}" placeholder="Ibuprofeno 600 mg"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Presentación</label><input name="presentacion" value="${esc(m.presentacion)}" placeholder="comprimidos, jarabe…"></div>
+      <div class="field"><label>Cantidad que queda</label><input name="cantidad" value="${esc(m.cantidad)}" placeholder="12 comprimidos"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Vencimiento (mes)</label><input name="vencimiento" type="month" value="${esc((m.vencimiento || "").slice(0, 7))}"></div>
+      <div class="field"><label>¿Necesita receta?</label><select name="receta"><option value="">No</option><option value="1" ${m.receta ? "selected" : ""}>Sí</option></select></div>
+    </div>
+    <div class="field"><label>Para qué sirve</label><textarea name="uso" style="min-height:60px">${esc(m.uso)}</textarea></div>
+    <div class="row"><button class="btn primary" type="submit">Guardar en el botiquín</button><button class="btn" type="button" data-discard>Descartar</button></div>
+  </form>`;
+}
+function openDraft(m) {
+  $("drafts").insertAdjacentHTML("afterbegin", draftForm({ nombre: "", principio: "", presentacion: "", cantidad: "", vencimiento: "", uso: "", receta: "", ...m }));
+}
+$("btnManual").onclick = () => openDraft({});
+$("drafts").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target; const fd = new FormData(f);
+  const m = { id: f.dataset.draft, nombre: fd.get("nombre").trim(), principio: fd.get("principio").trim(), presentacion: fd.get("presentacion").trim(),
+    cantidad: fd.get("cantidad").trim(), vencimiento: fd.get("vencimiento"), uso: fd.get("uso").trim(), receta: !!fd.get("receta"), agregado: new Date().toISOString().slice(0, 10) };
+  await putMed(m); f.remove();
+  if (!$("drafts").children.length) { $("readStatus").textContent = "Guardado."; }
+});
+$("drafts").addEventListener("click", (e) => { if (e.target.matches("[data-discard]")) e.target.closest("form").remove(); });
+
+// ---------- Claude (sample) ----------
+let sample = null, imgOk = false;
+(async () => {
+  sample = await window.claude?.use?.("sample");
+  if (!sample) {
+    $("btnRead").hidden = true; $("btnCam").hidden = true; $("btnSymPhoto").hidden = true;
+    $("photoHint").textContent = "La lectura automática de cajas no está disponible en esta vista; cargá a mano.";
+    $("btnAsk").disabled = true; $("askStatus").textContent = "La consulta con Claude no está disponible en esta vista.";
+    return;
+  }
+  const lim = await sample.limits().catch(() => null);
+  imgOk = !!lim?.images;
+  if (!imgOk) { $("btnCam").hidden = true; $("btnSymPhoto").hidden = true; $("photoHint").textContent = "Esta vista no puede enviar fotos; cargá a mano."; }
+})();
+const ERR = {
+  not_granted: "No permitiste que la app use Claude. Podés cambiarlo en los permisos de la página.",
+  rate_limited: "Demasiadas consultas seguidas. Esperá un momento y volvé a intentar.",
+  refused: "Claude no pudo responder a eso. Probá describirlo de otra forma.",
+  invalid_json: "No pude entender la lectura. Probá con una foto más nítida.",
+  image_rejected: "Esa imagen no sirve (formato o tamaño). Probá con otra.",
+  cancelled: "",
+};
+const errMsg = (e) => ERR[e?.code] ?? ("Hubo un problema (" + (e?.code || "error") + "). Intentá de nuevo.");
+
+// Fotos para agregar
+let photoFiles = [];
+$("btnCam").onclick = () => $("photos").click();
+$("photos").addEventListener("change", () => addPhotos($("photos").files));
+const drop = $("drop");
+drop.addEventListener("dragover", (e) => { e.preventDefault(); });
+drop.addEventListener("drop", (e) => { e.preventDefault(); addPhotos(e.dataTransfer.files); });
+function addPhotos(files) {
+  for (const f of files) if (f.type.startsWith("image/")) photoFiles.push(f);
+  photoFiles = photoFiles.slice(0, 8);
+  $("thumbs").innerHTML = "";
+  photoFiles.forEach((f) => { const img = document.createElement("img"); img.src = URL.createObjectURL(f); img.alt = f.name; $("thumbs").appendChild(img); });
+  $("btnRead").disabled = photoFiles.length === 0 || !imgOk;
+  $("photos").value = "";
+}
+let ctl1 = null;
+$("btnStop1").onclick = () => ctl1?.abort();
+$("btnRead").onclick = async () => {
+  if (!sample || !photoFiles.length) return;
+  ctl1 = new AbortController();
+  $("btnRead").disabled = true; $("btnStop1").hidden = false;
+  $("readStatus").textContent = "Leyendo las cajas…"; $("readStatus").classList.add("pulse");
+  const prompt = `Estas fotos son cajas, blísteres o envases de medicamentos de un botiquín doméstico en España. Identificá cada medicamento distinto que aparezca (puede haber varios en una foto, o el mismo en varias fotos: no lo repitas).
+Para cada uno devolvé un objeto con estos campos:
+- "nombre": nombre comercial tal como figura en la caja (ej. "Espidifen 600").
+- "principio": principio activo y dosis (ej. "Ibuprofeno arginina 600 mg").
+- "presentacion": forma farmacéutica y tamaño del envase (ej. "20 sobres", "comprimidos recubiertos").
+- "cantidad": lo que parece quedar si se ve el blíster; si no se ve, el contenido del envase; si no, "".
+- "vencimiento": fecha de caducidad en formato "YYYY-MM" (buscá "CAD", "EXP", "Caducidad"; si solo hay mes/año usá ese mes). Si no se ve, "".
+- "uso": en una frase corta y en español sencillo, para qué sirve y la dosis habitual en adulto según el prospecto (ej. "Dolor e inflamación, fiebre. 1 sobre cada 8 h, máx. 3 al día").
+- "receta": true si en España requiere receta médica, false si es de venta libre.
+Respondé solo con un array JSON de esos objetos, sin texto adicional. Si no se identifica ningún medicamento, devolvé [].`;
+  try {
+    const items = await sample.json(prompt, { images: photoFiles, signal: ctl1.signal, cache: false });
+    const arr = Array.isArray(items) ? items : [];
+    if (!arr.length) $("readStatus").textContent = "No encontré ningún medicamento en las fotos. Probá con otra toma.";
+    else { $("readStatus").textContent = `Leí ${arr.length} medicamento${arr.length > 1 ? "s" : ""}. Revisá los datos y guardá.`; }
+    arr.reverse().forEach((it) => openDraft({ nombre: it.nombre, principio: it.principio, presentacion: it.presentacion, cantidad: it.cantidad, vencimiento: (it.vencimiento || "").slice(0, 7), uso: it.uso, receta: !!it.receta }));
+    photoFiles = []; $("thumbs").innerHTML = "";
+  } catch (e) {
+    $("readStatus").textContent = errMsg(e);
+  } finally {
+    $("readStatus").classList.remove("pulse"); $("btnStop1").hidden = true; $("btnRead").disabled = photoFiles.length === 0;
+  }
+};
+
+// Consulta de síntomas
+let symFile = null, ctl2 = null;
+$("btnSymPhoto").onclick = () => $("symPhoto").click();
+$("symPhoto").addEventListener("change", () => { symFile = $("symPhoto").files[0] || null; $("symPhotoName").textContent = symFile ? symFile.name : ""; $("symPhoto").value = ""; });
+$("btnStop2").onclick = () => ctl2?.abort();
+function inventoryText() {
+  if (!meds.length) return "(el botiquín está vacío)";
+  return sorted().map((m) => {
+    const s = expState(m.vencimiento);
+    return `- ${m.nombre} | ${m.principio || "?"} | ${m.presentacion || ""} | queda: ${m.cantidad || "?"} | vence: ${m.vencimiento || "?"}${s.cls === "bad" ? " (VENCIDO)" : s.cls === "warn" ? " (vence pronto)" : ""} | uso: ${m.uso || ""}${m.receta ? " | con receta" : ""}`;
+  }).join("\n");
+}
+$("btnAsk").onclick = async () => {
+  const sym = $("sym").value.trim();
+  if (!sample || (!sym && !symFile)) { $("askStatus").textContent = "Contame qué te pasa o adjuntá una foto."; return; }
+  ctl2 = new AbortController();
+  $("btnAsk").disabled = true; $("btnStop2").hidden = false; $("answer").textContent = "";
+  $("askStatus").textContent = "Revisando tu botiquín…"; $("askStatus").classList.add("pulse");
+  const today = new Date().toISOString().slice(0, 10);
+  const prompt = `Sos un farmacéutico de confianza en España. Hoy es ${today}. Una persona adulta te cuenta un síntoma y te muestra el inventario de su botiquín de casa.
+
+SÍNTOMA O CONSULTA: ${sym || "(ver la foto adjunta)"}${symFile ? "\n(Hay una foto adjunta: describí brevemente qué ves si es relevante.)" : ""}
+
+BOTIQUÍN:
+${inventoryText()}
+
+Respondé en español, breve y práctico, en texto plano salvo una excepción: el nombre de cada medicamento o producto que recomendás (usar o comprar) va entre dobles asteriscos, así: **Espidifen 600**. Nada más va en negrita. Estructura:
+1. "Lo que tenés en casa": qué medicamento(s) del botiquín servirían, con dosis orientativa de adulto y cuánto tiempo. Nunca recomiendes uno marcado VENCIDO (decí que está vencido y hay que tirarlo en el punto SIGRE de la farmacia). Si varios sirven, elegí el más adecuado y decí por qué.
+2. "Si no tenés nada que sirva" (solo si aplica): qué comprar en la farmacia sin receta en España (principio activo y un nombre comercial habitual), y si lo que haría falta requiere receta, decilo.
+3. "Cuándo ir al médico": señales de alarma concretas para este síntoma.
+Si el síntoma sugiere una urgencia (dolor en el pecho, dificultad para respirar, confusión, fiebre muy alta, reacción alérgica grave, etc.), decí primero que llame al 112.
+Al final, en una última línea separada, escribí exactamente: COMPRAR: seguido de una lista separada por ";" de lo que recomendás comprar (nombre o principio activo), o COMPRAR: nada.`;
+  const clean = (t) => t.replace(/\n?COMPRAR:.*$/s, "").trim();
+  try {
+    const opts = { signal: ctl2.signal, cache: false, onText: ({ text }) => { $("answer").innerHTML = md(clean(text)); } };
+    if (symFile) opts.images = symFile;
+    const { text } = await sample(prompt, opts);
+    const m = /COMPRAR:\s*(.*)$/s.exec(text);
+    const respuesta = clean(text);
+    $("answer").innerHTML = md(respuesta);
+    $("askStatus").textContent = "";
+    let items = [];
+    if (m && !/^\s*nada\.?\s*$/i.test(m[1])) {
+      items = m[1].split(";").map((s) => s.trim()).filter(Boolean);
+      items.forEach((n) => { if (!shop.some((x) => x.nombre.toLowerCase() === n.toLowerCase())) shop.push({ id: uid(), nombre: n, motivo: sym.slice(0, 60) }); });
+      await saveShop();
+      $("askStatus").textContent = "Agregué a la lista de la farmacia: " + items.join(", ") + ".";
+    }
+    await putHist({ id: uid(), fecha: new Date().toISOString(), sintoma: sym || "(consulta con foto)", conFoto: !!symFile, respuesta, compras: items });
+  } catch (e) {
+    if (e?.text) $("answer").innerHTML = md(clean(e.text));
+    $("askStatus").textContent = errMsg(e);
+  } finally {
+    $("askStatus").classList.remove("pulse"); $("btnStop2").hidden = true; $("btnAsk").disabled = false;
+    symFile = null; $("symPhotoName").textContent = "";
+  }
+};
+
+// ---------- Historial de consultas ----------
+function md(t) { // solo negritas: **texto** -> <strong>; el resto escapado
+  return esc(t).replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>");
+}
+function fmtWhen(iso) {
+  const d = new Date(iso); if (isNaN(d)) return "";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+function renderHist() {
+  const items = [...hist].sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
+  $("histHint").hidden = items.length > 0;
+  $("hist").innerHTML = items.map((h) => `<details class="card hist" data-hid="${esc(h.id)}">
+    <summary><span class="when">${esc(fmtWhen(h.fecha))}</span><span class="what">${esc(h.sintoma)}${h.conFoto ? " 📷" : ""}</span></summary>
+    <div class="answer">${md(h.respuesta || "")}</div>
+    ${h.compras?.length ? `<p class="muted" style="margin-top:8px">Para comprar: ${esc(h.compras.join(", "))}</p>` : ""}
+    <div class="row"><button class="btn small danger" type="button" data-hdel>Borrar consulta</button></div>
+  </details>`).join("");
+}
+$("hist").addEventListener("click", (e) => {
+  if (!e.target.matches("[data-hdel]")) return;
+  const id = e.target.closest("[data-hid]").dataset.hid;
+  if (e.target.dataset.sure) delHist(id);
+  else { e.target.dataset.sure = "1"; e.target.textContent = "¿Seguro? Borrar"; setTimeout(() => { delete e.target.dataset.sure; e.target.textContent = "Borrar consulta"; }, 3000); }
+});
+
+// ---------- Dirección para los mapas ----------
+function updateMapLinks() {
+  const a = $("addr").value.trim();
+  const near = a ? "+cerca+de+" + encodeURIComponent(a).replace(/%20/g, "+") : "+cerca+de+mi";
+  $("lnkOpen").href = "https://www.google.com/maps/search/farmacia+abierta+ahora" + near + "/";
+  $("lnkGuard").href = "https://www.google.com/maps/search/farmacia+de+guardia+24+horas" + near + "/";
+  $("lnkApple").href = "https://maps.apple.com/?q=" + (a ? "farmacia&near=" + encodeURIComponent(a) : "farmacia+cerca+de+mi");
+}
+try { $("addr").value = localStorage.getItem("botiquin.addr") || ""; } catch {}
+updateMapLinks();
+// GPS del teléfono: se intenta; si el marco no lo permite, Maps usa la ubicación por su cuenta.
+$("btnGeo").onclick = () => {
+  const openNear = () => { const a = document.createElement("a"); a.href = "https://www.google.com/maps/search/farmacia+abierta+ahora+cerca+de+mi/"; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); };
+  if (!navigator.geolocation) { openNear(); return; }
+  $("geoStatus").textContent = "Buscando tu ubicación…";
+  let done = false;
+  const finish = (url, msg) => { if (done) return; done = true; $("geoStatus").textContent = msg; const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); };
+  navigator.geolocation.getCurrentPosition(
+    (p) => finish(`https://www.google.com/maps/search/farmacia+abierta+ahora/@${p.coords.latitude.toFixed(5)},${p.coords.longitude.toFixed(5)},16z`, "Abriendo Maps en tu zona."),
+    () => finish("https://www.google.com/maps/search/farmacia+abierta+ahora+cerca+de+mi/", "Maps va a usar la ubicación del teléfono."),
+    { timeout: 6000, maximumAge: 60000 }
+  );
+  setTimeout(() => finish("https://www.google.com/maps/search/farmacia+abierta+ahora+cerca+de+mi/", "Maps va a usar la ubicación del teléfono."), 7000);
+};
+let addrTimer = null;
+$("addr").addEventListener("input", () => {
+  updateMapLinks();
+  try { localStorage.setItem("botiquin.addr", $("addr").value); } catch {}
+  clearTimeout(addrTimer);
+  addrTimer = setTimeout(() => { if (db) db.doc("config/ubicacion").set({ direccion: $("addr").value.trim() }).catch(() => {}); }, 1200);
+});
+(async () => {
+  await dbInit;
+  if (!db) return;
+  try { const s = await db.doc("config/ubicacion").get(); if (s.exists && s.data().direccion && !$("addr").value) { $("addr").value = s.data().direccion; updateMapLinks(); } } catch {}
+})();
+
+// ---------- Lista de compras ----------
+function renderShop() {
+  $("shop").innerHTML = shop.map((s) => `<div class="row" style="justify-content:space-between"><div><b>${esc(s.nombre)}</b>${s.motivo ? ` <span class="muted">· ${esc(s.motivo)}</span>` : ""}</div><button class="btn small" data-shopdel="${esc(s.id)}">Ya lo compré</button></div>`).join("");
+  $("shopHint").hidden = shop.length > 0; $("btnCopyShop").hidden = !shop.length; $("btnClearShop").hidden = !shop.length;
+}
+$("shop").addEventListener("click", (e) => { const id = e.target.dataset.shopdel; if (id) { shop = shop.filter((x) => x.id !== id); saveShop(); } });
+$("btnClearShop").onclick = () => { shop = []; saveShop(); };
+$("btnCopyShop").onclick = async () => {
+  const txt = shop.map((s) => "- " + s.nombre).join("\n");
+  try { await navigator.clipboard.writeText(txt); $("btnCopyShop").textContent = "Copiado"; setTimeout(() => $("btnCopyShop").textContent = "Copiar lista", 1500); }
+  catch { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); setTimeout(() => ta.remove(), 4000); }
+};
+})();
+</script>
+
+</body></html>
