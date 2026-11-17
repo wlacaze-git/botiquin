@@ -4,3 +4,8 @@ project_id = "botiquin"
 [functions.claude]
 # El gateway de Supabase exige un JWT válido antes de llegar a la función.
 verify_jwt = true
+
+[auth]
+# URL pública de la app (GitHub Pages) y adónde puede volver Google después del login.
+site_url = "https://wlacaze-git.github.io/botiquin/"
+additional_redirect_urls = ["https://wlacaze-git.github.io/botiquin/", "http://localhost:8000/"]
