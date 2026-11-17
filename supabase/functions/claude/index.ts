@@ -18,6 +18,15 @@ import Anthropic from "npm:@anthropic-ai/sdk@1.4.0";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
 
 const MODELO = Deno.env.get("CLAUDE_MODEL") ?? "claude-opus-5-5";
+// Leer cajas es extracción simple: Haiku alcanza y cuesta una fracción (~0,2 céntimos por tanda de 8 fotos).
+const MODELO_CAJAS = Deno.env.get("CLAUDE_MODEL_CAJAS") ?? "claude-haiku-5-5";
+
+// El fallback del lado del servidor (si el modelo rechaza, reintenta con otro) existe en Opus/Sonnet/Fable, no en Haiku.
+function conFallback(modelo: string) {
+  return modelo.includes("haiku")
+    ? {}
+    : { betas: ["server-side-fallback-2026-07-01"] as Anthropic.Beta.AnthropicBeta[], fallbacks: "default" as const };
+}
 const LIMITE_DIARIO = Number(Deno.env.get("LIMITE_DIARIO") ?? "40");
 const ORIGENES = (Deno.env.get("ORIGENES_PERMITIDOS") ?? "*").split(",").map((s) => s.trim());
 
@@ -158,10 +167,9 @@ async function leerCajas(body: Record<string, unknown>) {
   const imagenes = imgs.map(validarImagen);
 
   const resp = await anthropic.beta.messages.create({
-    model: MODELO,
+    model: MODELO_CAJAS,
     max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    ...conFallback(MODELO_CAJAS),
     output_config: {
       effort: "medium",
       format: { type: "json_schema", schema: ESQUEMA_CAJAS },
@@ -238,8 +246,7 @@ function consulta(req: Request, sb: SupabaseClient, body: Record<string, unknown
         const s = anthropic.beta.messages.stream({
           model: MODELO,
           max_tokens: 16000,
-          betas: ["server-side-fallback-2026-07-01"],
-          fallbacks: "default",
+          ...conFallback(MODELO),
           output_config: { effort: "medium" },
           system: SISTEMA_CONSULTA,
           messages: [{

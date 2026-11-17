@@ -50,7 +50,8 @@ Funciones RPC: `mi_botiquin()` (devuelve tus botiquines y crea uno la primera ve
 - Verifica la sesión, cuenta la llamada contra el límite diario (`LIMITE_DIARIO`, 40 por defecto) y arma los prompts del lado del servidor. La página solo manda datos, así que la función no sirve como un Claude de uso general.
 - `leer_cajas`: devuelve JSON validado con un esquema (structured outputs).
 - `consulta`: lee el inventario de la base con la sesión del usuario, responde en streaming (NDJSON) y al final guarda la consulta y agrega las compras.
-- Modelo: `claude-opus-5-5` por defecto, con fallback del lado del servidor si el modelo rechaza la consulta. Se cambia con el secreto `CLAUDE_MODEL`. Por ejemplo, `claude-haiku-5-5` es mucho más barato y probablemente alcanza para leer cajas.
+- Modelos: las consultas usan `claude-opus-5-5` (secreto `CLAUDE_MODEL`), con fallback del lado del servidor si el modelo rechaza la consulta. La lectura de cajas usa `claude-haiku-5-5` (secreto `CLAUDE_MODEL_CAJAS`): unos 0,2 céntimos por tanda de 8 fotos.
+- ¿Por qué no Gemini gratis? Las condiciones de Google prohíben usar el plan gratuito en apps para usuarios del EEE (España incluida) y, en ese plan, Google puede usar lo que se le manda para mejorar sus productos.
 
 ## Puesta en marcha
 
@@ -82,7 +83,7 @@ npx supabase login
 npx supabase link --project-ref TU-REF
 npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-... ORIGENES_PERMITIDOS=https://TU-USUARIO.github.io,http://localhost:8000
 # opcionales:
-npx supabase secrets set LIMITE_DIARIO=40 CLAUDE_MODEL=claude-opus-5-5
+npx supabase secrets set LIMITE_DIARIO=40 CLAUDE_MODEL=claude-opus-5-5 CLAUDE_MODEL_CAJAS=claude-haiku-5-5
 npx supabase functions deploy claude
 ```
 
