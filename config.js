@@ -3,3 +3,6 @@
 // Nunca pongas acá la service_role key ni la clave de Anthropic.
 export const SUPABASE_URL = "https://oxrogurhrrfkjrprwjls.supabase.co";
 export const SUPABASE_ANON_KEY = "sb_publishable_DoYwXdNaL8r0KBGkh7M1tA_x6atTlFV";
+
+// Poné true cuando el proveedor Google esté activado en Supabase (Authentication → Providers → Google).
+export const LOGIN_GOOGLE = false;

@@ -1,12 +1,12 @@
-// Edge Function "claude": única puerta entre la página y la API de Anthropic.
+// Edge Function "asistente": única puerta entre la página y la API de DeepSeek.
 //
-// - La clave de Anthropic vive acá como secreto (ANTHROPIC_API_KEY), nunca en la página.
+// - La clave de DeepSeek vive acá como secreto (DEEPSEEK_API_KEY), nunca en la página.
 // - Los prompts se arman acá: la página solo manda datos (fotos, síntoma, id del botiquín),
-//   así nadie puede usar la función como un Claude gratis para cualquier cosa.
+//   así nadie puede usar la función como un chatbot gratis para cualquier cosa.
 // - Se verifica la sesión de Supabase y se limita la cantidad de llamadas por usuario y día.
 // - El inventario se lee de la base con la sesión del usuario (RLS), no se confía en lo que mande la página.
 //
-// POST /functions/v1/claude
+// POST /functions/v1/asistente
 //   { "tipo": "leer_cajas", "imagenes": [{ "media_type": "image/jpeg", "data": "<base64>" }, ...] }
 //     -> 200 { "medicamentos": [...] }
 //   { "tipo": "consulta", "botiquin_id": "<uuid>", "sintoma": "...", "imagen"?: { media_type, data } }
@@ -14,27 +14,18 @@
 //        o {"error":"codigo"} si algo falla a mitad de camino.
 // Errores antes de empezar: { "error": "codigo" } con status 4xx/5xx.
 
-import Anthropic from "npm:@anthropic-ai/sdk@1.4.0";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
 
-const MODELO = Deno.env.get("CLAUDE_MODEL") ?? "claude-opus-5-5";
-// Leer cajas es extracción simple: Haiku alcanza y cuesta una fracción (~0,2 céntimos por tanda de 8 fotos).
-const MODELO_CAJAS = Deno.env.get("CLAUDE_MODEL_CAJAS") ?? "claude-haiku-5-5";
-
-// El fallback del lado del servidor (si el modelo rechaza, reintenta con otro) existe en Opus/Sonnet/Fable, no en Haiku.
-function conFallback(modelo: string) {
-  return modelo.includes("haiku")
-    ? {}
-    : { betas: ["server-side-fallback-2026-07-01"] as Anthropic.Beta.AnthropicBeta[], fallbacks: "default" as const };
-}
+// API de DeepSeek (formato OpenAI Chat Completions). "deepseek-flash" acepta imágenes.
+const DEEPSEEK_URL = Deno.env.get("DEEPSEEK_URL") ?? "https://api.deepseek.com/chat/completions";
+const MODELO = Deno.env.get("DEEPSEEK_MODEL") ?? "deepseek-flash";
+const MODELO_CAJAS = Deno.env.get("DEEPSEEK_MODEL_CAJAS") ?? MODELO;
 const LIMITE_DIARIO = Number(Deno.env.get("LIMITE_DIARIO") ?? "40");
 const ORIGENES = (Deno.env.get("ORIGENES_PERMITIDOS") ?? "*").split(",").map((s) => s.trim());
 
 const MAX_IMAGENES = 8;
 const MAX_BASE64 = 5_000_000; // ~3.7 MB por imagen; la página ya las achica a ~1500 px
 const TIPOS_IMAGEN = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-
-const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
 
 // ---------------------------------------------------------------- HTTP helpers
 
@@ -62,6 +53,13 @@ class ErrorApp extends Error {
   }
 }
 
+function codigoDeError(e: unknown): { codigo: string; status: number } {
+  if (e instanceof ErrorApp) return { codigo: e.codigo, status: e.status };
+  if (e instanceof DOMException && e.name === "AbortError") return { codigo: "cancelled", status: 499 };
+  console.error(e);
+  return { codigo: "internal", status: 500 };
+}
+
 type Imagen = { media_type: string; data: string };
 
 function validarImagen(x: unknown): Imagen {
@@ -69,30 +67,47 @@ function validarImagen(x: unknown): Imagen {
   if (!img || typeof img.data !== "string" || !TIPOS_IMAGEN.has(img.media_type)) {
     throw new ErrorApp("image_rejected");
   }
-  if (img.data.length > MAX_BASE64) throw new ErrorApp("image_rejected");
+  if (img.data.length > MAX_BASE64 || !/^[A-Za-z0-9+/=]+$/.test(img.data.slice(0, 200))) {
+    throw new ErrorApp("image_rejected");
+  }
   return { media_type: img.media_type, data: img.data };
 }
 
-function bloqueImagen(img: Imagen): Anthropic.Beta.BetaImageBlockParam {
-  return {
-    type: "image",
-    source: { type: "base64", media_type: img.media_type as "image/jpeg", data: img.data },
-  };
-}
+const bloqueImagen = (img: Imagen) => ({
+  type: "image_url",
+  image_url: { url: `data:${img.media_type};base64,${img.data}` },
+});
 
-/** Traduce errores de la API de Anthropic a los códigos que entiende la página. */
-function codigoDeError(e: unknown): { codigo: string; status: number } {
-  if (e instanceof ErrorApp) return { codigo: e.codigo, status: e.status };
-  if (e instanceof Anthropic.RateLimitError) return { codigo: "rate_limited", status: 429 };
-  if (e instanceof Anthropic.BadRequestError) {
-    const msg = String(e.message ?? "").toLowerCase();
-    return { codigo: msg.includes("image") ? "image_rejected" : "bad_request", status: 400 };
+// ---------------------------------------------------------------- DeepSeek
+
+type Mensaje = { role: "system" | "user"; content: string | Array<Record<string, unknown>> };
+
+async function llamarDeepSeek(body: Record<string, unknown>, signal?: AbortSignal): Promise<Response> {
+  const clave = Deno.env.get("DEEPSEEK_API_KEY");
+  if (!clave) throw new ErrorApp("server_config", 500);
+  let r: Response;
+  try {
+    r = await fetch(DEEPSEEK_URL, {
+      method: "POST",
+      signal,
+      headers: { Authorization: `Bearer ${clave}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    if (signal?.aborted) throw e;
+    console.error("deepseek red", e);
+    throw new ErrorApp("upstream", 502);
   }
-  if (e instanceof Anthropic.AuthenticationError) return { codigo: "server_config", status: 500 };
-  if (e instanceof Anthropic.APIError) return { codigo: "upstream", status: 502 };
-  if (e instanceof Anthropic.APIConnectionError) return { codigo: "upstream", status: 502 };
-  console.error(e);
-  return { codigo: "internal", status: 500 };
+  if (r.ok) return r;
+  const detalle = (await r.text().catch(() => "")).slice(0, 500);
+  console.error("deepseek", r.status, detalle);
+  if (r.status === 401) throw new ErrorApp("server_config", 500);
+  if (r.status === 402) throw new ErrorApp("sin_saldo", 402);
+  if (r.status === 429) throw new ErrorApp("rate_limited", 429);
+  if (r.status === 400 || r.status === 422) {
+    throw new ErrorApp(/image/i.test(detalle) ? "image_rejected" : "bad_request", 400);
+  }
+  throw new ErrorApp("upstream", 502);
 }
 
 // ---------------------------------------------------------------- fechas (hora de España)
@@ -113,7 +128,7 @@ function estadoVencimiento(v: string, hoy: string): string {
 
 // ---------------------------------------------------------------- prompts
 
-const PROMPT_CAJAS = `Estas fotos son cajas, blísteres o envases de medicamentos de un botiquín doméstico en España. Identificá cada medicamento distinto que aparezca (puede haber varios en una foto, o el mismo en varias fotos: no lo repitas).
+const PROMPT_CAJAS = `Las fotos que te mandan son cajas, blísteres o envases de medicamentos de un botiquín doméstico en España. Identificá cada medicamento distinto que aparezca (puede haber varios en una foto, o el mismo en varias fotos: no lo repitas).
 Para cada uno completá:
 - nombre: nombre comercial tal como figura en la caja (ej. "Espidifen 600").
 - principio: principio activo y dosis (ej. "Ibuprofeno arginina 600 mg").
@@ -122,36 +137,14 @@ Para cada uno completá:
 - vencimiento: fecha de caducidad en formato "YYYY-MM" (buscá "CAD", "EXP", "Caducidad"; si solo hay mes/año usá ese mes). Si no se ve, "".
 - uso: en una frase corta y en español sencillo, para qué sirve y la dosis habitual en adulto según el prospecto (ej. "Dolor e inflamación, fiebre. 1 sobre cada 8 h, máx. 3 al día").
 - receta: true si en España requiere receta médica, false si es de venta libre.
-Si no se identifica ningún medicamento, devolvé la lista vacía.`;
 
-const ESQUEMA_CAJAS = {
-  type: "object",
-  properties: {
-    medicamentos: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          nombre: { type: "string" },
-          principio: { type: "string" },
-          presentacion: { type: "string" },
-          cantidad: { type: "string" },
-          vencimiento: { type: "string" },
-          uso: { type: "string" },
-          receta: { type: "boolean" },
-        },
-        required: ["nombre", "principio", "presentacion", "cantidad", "vencimiento", "uso", "receta"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["medicamentos"],
-  additionalProperties: false,
-} as const;
+Respondé SOLO con un objeto JSON con esta forma exacta, sin texto adicional:
+{"medicamentos": [{"nombre": "", "principio": "", "presentacion": "", "cantidad": "", "vencimiento": "", "uso": "", "receta": false}]}
+Si no se identifica ningún medicamento, devolvé {"medicamentos": []}.`;
 
 const SISTEMA_CONSULTA = `Sos un farmacéutico de confianza en España. Una persona adulta te cuenta un síntoma y te muestra el inventario de su botiquín de casa.
 
-Respondé en español, breve y práctico, en texto plano salvo una excepción: el nombre de cada medicamento o producto que recomendás (usar o comprar) va entre dobles asteriscos, así: **Espidifen 600**. Nada más va en negrita. Estructura:
+Respondé en español, breve y práctico, en texto plano salvo una excepción: el nombre de cada medicamento o producto que recomendás (usar o comprar) va entre dobles asteriscos, así: **Espidifen 600**. Nada más va en negrita. No uses títulos con #, ni tablas. Estructura:
 1. "Lo que tenés en casa": qué medicamento(s) del botiquín servirían, con dosis orientativa de adulto y cuánto tiempo. Nunca recomiendes uno marcado VENCIDO (decí que está vencido y hay que tirarlo en el punto SIGRE de la farmacia). Si varios sirven, elegí el más adecuado y decí por qué.
 2. "Si no tenés nada que sirva" (solo si aplica): qué comprar en la farmacia sin receta en España (principio activo y un nombre comercial habitual), y si lo que haría falta requiere receta, decilo.
 3. "Cuándo ir al médico": señales de alarma concretas para este síntoma.
@@ -166,33 +159,36 @@ async function leerCajas(body: Record<string, unknown>) {
   if (!imgs.length || imgs.length > MAX_IMAGENES) throw new ErrorApp("bad_request");
   const imagenes = imgs.map(validarImagen);
 
-  const resp = await anthropic.beta.messages.create({
-    model: MODELO_CAJAS,
-    max_tokens: 16000,
-    ...conFallback(MODELO_CAJAS),
-    output_config: {
-      effort: "medium",
-      format: { type: "json_schema", schema: ESQUEMA_CAJAS },
-    },
-    messages: [{
+  const mensajes: Mensaje[] = [
+    { role: "system", content: PROMPT_CAJAS },
+    {
       role: "user",
-      content: [...imagenes.map(bloqueImagen), { type: "text", text: PROMPT_CAJAS }],
-    }],
+      content: [...imagenes.map(bloqueImagen), { type: "text", text: "Leé los medicamentos de estas fotos y devolvé el JSON." }],
+    },
+  ];
+  const r = await llamarDeepSeek({
+    model: MODELO_CAJAS,
+    messages: mensajes,
+    response_format: { type: "json_object" },
+    max_tokens: 4000,
+    stream: false,
   });
+  const resp = await r.json();
+  const eleccion = resp?.choices?.[0];
+  if (eleccion?.finish_reason === "content_filter") throw new ErrorApp("refused", 422);
+  if (eleccion?.finish_reason === "length") throw new ErrorApp("invalid_json", 502);
 
-  if (resp.stop_reason === "refusal") throw new ErrorApp("refused", 422);
-  if (resp.stop_reason === "max_tokens") throw new ErrorApp("invalid_json", 502);
-  const texto = resp.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   let datos: { medicamentos?: unknown };
   try {
+    const texto = String(eleccion?.message?.content ?? "").replace(/^```(?:json)?\s*|\s*```$/g, "");
     datos = JSON.parse(texto);
   } catch {
     throw new ErrorApp("invalid_json", 502);
   }
-  const lista = Array.isArray(datos.medicamentos) ? datos.medicamentos : [];
+  const lista = Array.isArray(datos?.medicamentos) ? datos.medicamentos : [];
   return {
-    medicamentos: lista.map((x) => {
-      const m = x as Record<string, unknown>;
+    medicamentos: lista.slice(0, 30).map((x) => {
+      const m = (x ?? {}) as Record<string, unknown>;
       const s = (k: string, max: number) => String(m[k] ?? "").trim().slice(0, max);
       const venc = s("vencimiento", 10).slice(0, 7);
       return {
@@ -202,7 +198,7 @@ async function leerCajas(body: Record<string, unknown>) {
         cantidad: s("cantidad", 100),
         vencimiento: /^\d{4}-\d{2}$/.test(venc) ? venc : "",
         uso: s("uso", 1000),
-        receta: m.receta === true,
+        receta: m.receta === true || m.receta === "true",
       };
     }).filter((m) => m.nombre),
   };
@@ -219,6 +215,32 @@ async function inventario(sb: SupabaseClient, botiquinId: string, hoy: string): 
   return data.map((m) =>
     `- ${m.nombre} | ${m.principio || "?"} | ${m.presentacion || ""} | queda: ${m.cantidad || "?"} | vence: ${m.vencimiento || "?"}${estadoVencimiento(m.vencimiento, hoy)} | uso: ${m.uso || ""}${m.receta ? " | con receta" : ""}`
   ).join("\n");
+}
+
+/** Lee el stream SSE de DeepSeek y va llamando a onTexto con cada trozo de respuesta. */
+async function leerSSE(r: Response, onTexto: (t: string) => void): Promise<{ texto: string; fin: string | null }> {
+  const reader = r.body!.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "", texto = "", fin: string | null = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    let i;
+    while ((i = buf.indexOf("\n")) >= 0) {
+      const linea = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!linea.startsWith("data:")) continue;
+      const dato = linea.slice(5).trim();
+      if (dato === "[DONE]") return { texto, fin };
+      let ev;
+      try { ev = JSON.parse(dato); } catch { continue; }
+      const ch = ev?.choices?.[0];
+      const t = ch?.delta?.content; // se ignora delta.reasoning_content (razonamiento interno)
+      if (typeof t === "string" && t) { texto += t; onTexto(t); }
+      if (ch?.finish_reason) fin = ch.finish_reason;
+    }
+  }
+  return { texto, fin };
 }
 
 function consulta(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
@@ -243,40 +265,33 @@ function consulta(req: Request, sb: SupabaseClient, body: Record<string, unknown
           (imagen ? "\n(Hay una foto adjunta: describí brevemente qué ves si es relevante.)" : "") +
           `\n\nBOTIQUÍN:\n${await inventario(sb, botiquinId, hoy)}`;
 
-        const s = anthropic.beta.messages.stream({
+        const r = await llamarDeepSeek({
           model: MODELO,
-          max_tokens: 16000,
-          ...conFallback(MODELO),
-          output_config: { effort: "medium" },
-          system: SISTEMA_CONSULTA,
-          messages: [{
-            role: "user",
-            content: [...(imagen ? [bloqueImagen(imagen)] : []), { type: "text", text: texto }],
-          }],
-        }, { signal: req.signal });
+          stream: true,
+          max_tokens: 4000,
+          messages: [
+            { role: "system", content: SISTEMA_CONSULTA },
+            { role: "user", content: imagen ? [bloqueImagen(imagen), { type: "text", text: texto }] : texto },
+          ],
+        }, req.signal);
 
-        s.on("text", (t) => enviar({ t }));
-        const final = await s.finalMessage();
-        if (final.stop_reason === "refusal") throw new ErrorApp("refused", 422);
+        const { texto: completo, fin } = await leerSSE(r, (t) => enviar({ t }));
+        if (fin === "content_filter") throw new ErrorApp("refused", 422);
+        if (!completo.trim()) throw new ErrorApp("upstream", 502);
 
-        const completo = final.content.flatMap((x) => (x.type === "text" ? [x.text] : [])).join("");
         const m = /COMPRAR:\s*(.*)$/s.exec(completo);
-        const respuesta = completo.replace(/\n?COMPRAR:.*$/s, "").trim();
+        const respuesta = completo.replace(/\n?\**COMPRAR:.*$/s, "").trim();
         const compras = m && !/^\s*nada\.?\s*$/i.test(m[1])
-          ? m[1].split(";").map((x) => x.trim().replace(/^\*\*|\*\*$/g, "")).filter(Boolean).slice(0, 10)
+          ? m[1].split(";").map((x) => x.trim().replace(/^\*\*|\*\*$/g, "").trim()).filter(Boolean).slice(0, 10)
           : [];
 
-        // Guardar con la sesión del usuario (RLS).
-        if (compras.length) {
-          const filas = compras.map((nombre) => ({
+        // Guardar con la sesión del usuario (RLS). Índice único por (botiquin, lower(nombre)): los repetidos fallan y se ignoran.
+        for (const nombre of compras) {
+          await sb.from("compras").insert({
             botiquin_id: botiquinId,
             nombre: nombre.slice(0, 200),
             motivo: (sintoma || "consulta con foto").slice(0, 60),
-          }));
-          for (const f of filas) {
-            // índice único por (botiquin, lower(nombre)): ignorar repetidos
-            await sb.from("compras").insert(f).then(() => {}, () => {});
-          }
+          }).then(() => {}, () => {});
         }
         const { data: c, error } = await sb.from("consultas").insert({
           botiquin_id: botiquinId,

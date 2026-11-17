@@ -142,6 +142,11 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; 
 .login h2 { font-size: 26px; }
 .gbtn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .gbtn svg { width: 18px; height: 18px; }
+.login .sep { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.login .sep::before, .login .sep::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.otp { display: grid; gap: 8px; }
+.otp input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); text-align: center; }
+#codigo { letter-spacing: .2em; font-variant-numeric: tabular-nums; }
 /* Panel de cuenta */
 dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--fg); padding: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); }
 dialog::backdrop { background: rgb(0 0 0 / .45); }
@@ -174,7 +179,17 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#fff" opacity=".85" d="M12 22c2.7 0 5-.9 6.6-2.5l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#fff" opacity=".7" d="M6.4 13.9a6 6 0 0 1 0-3.8V7.5H3.1a10 10 0 0 0 0 9z"/><path fill="#fff" opacity=".55" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.5l3.3 2.6C7.2 7.8 9.4 6 12 6z"/></svg>
       Entrar con Google
     </button>
-    <p class="status" id="loginStatus"></p>
+    <div class="sep muted">o con tu email</div>
+    <form id="fEmail" class="otp">
+      <input id="email" type="email" required autocomplete="email" placeholder="tu@gmail.com" aria-label="Email">
+      <button class="btn primary" type="submit">Mandarme un link para entrar</button>
+    </form>
+    <form id="fCodigo" class="otp" hidden>
+      <input id="codigo" inputmode="numeric" autocomplete="one-time-code" required maxlength="10" placeholder="Código (si el email trae uno)" aria-label="Código">
+      <button class="btn primary" type="submit">Entrar</button>
+      <button class="btn small" type="button" id="btnOtroEmail">Usar otro email</button>
+    </form>
+    <p class="status" id="loginStatus" aria-live="polite"></p>
   </div>
 </div>
 
@@ -338,7 +353,8 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import * as config from "./config.js";
+const { SUPABASE_URL, SUPABASE_ANON_KEY } = config;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -362,7 +378,10 @@ if (SUPABASE_URL.includes("TU-PROYECTO")) {
   note("Sin configurar", true);
   throw new Error("config.js sin completar");
 }
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { flowType: "pkce" } });
+// Flujo "implicit": el link del email funciona aunque se abra en otro navegador o dispositivo (PKCE exige el mismo navegador).
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { flowType: "implicit" } });
+// El botón de Google solo aparece cuando el proveedor está activado en Supabase (config.js → LOGIN_GOOGLE).
+if (!config.LOGIN_GOOGLE) { $("btnGoogle").hidden = true; document.querySelector(".login .sep").hidden = true; }
 
 // Invitación por enlace (?unirse=CODIGO): se guarda para usarla después de entrar.
 {
@@ -428,8 +447,41 @@ $("btnGoogle").onclick = async () => {
     provider: "google",
     options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: "select_account" } },
   });
-  if (error) { $("btnGoogle").disabled = false; status("loginStatus", "No se pudo abrir Google: " + error.message, true); }
+  if (error) {
+    $("btnGoogle").disabled = false;
+    status("loginStatus", /provider is not enabled|Unsupported provider/i.test(error.message)
+      ? "El login con Google todavía no está activado. Entrá con tu email."
+      : "No se pudo abrir Google: " + error.message, true);
+  }
 };
+
+// Entrar con un código que llega por email (funciona con cualquier email, Gmail incluido).
+let emailOtp = "";
+$("fEmail").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector("button"); btn.disabled = true;
+  emailOtp = $("email").value.trim().toLowerCase();
+  status("loginStatus", "Mandando el email…");
+  const { error } = await sb.auth.signInWithOtp({ email: emailOtp, options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname } });
+  btn.disabled = false;
+  if (error) {
+    status("loginStatus", /rate limit|security purposes/i.test(error.message)
+      ? "Pediste muchos emails seguidos. Esperá unos minutos y probá de nuevo."
+      : "No se pudo mandar el email: " + error.message, true);
+    return;
+  }
+  $("fEmail").hidden = true; $("fCodigo").hidden = false; $("codigo").value = ""; $("codigo").focus();
+  status("loginStatus", `Te mandé un email a ${emailOtp}. Tocá el link desde este dispositivo (mirá también en spam).`);
+});
+$("fCodigo").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
+  const token = $("codigo").value.replace(/\D/g, "");
+  const { error } = await sb.auth.verifyOtp({ email: emailOtp, token, type: "email" });
+  btn.disabled = false;
+  if (error) status("loginStatus", "El código no es correcto o venció. Pedí otro.", true);
+});
+$("btnOtroEmail").onclick = () => { $("fCodigo").hidden = true; $("fEmail").hidden = false; status("loginStatus", ""); };
 
 let arrancando = false;
 sb.auth.onAuthStateChange((evento, session) => {
@@ -445,6 +497,7 @@ function mostrarLogin() {
   if (canal) { sb.removeChannel(canal); canal = null; }
   $("app").hidden = true; $("tabs").hidden = true; $("btnCuenta").hidden = true;
   $("login").hidden = false; $("btnGoogle").disabled = false; status("loginStatus", "");
+  $("fCodigo").hidden = true; $("fEmail").hidden = false;
   note("");
 }
 
@@ -630,29 +683,30 @@ $("drafts").addEventListener("submit", async (e) => {
 });
 $("drafts").addEventListener("click", (e) => { if (e.target.matches("[data-discard]")) e.target.closest("form").remove(); });
 
-// ---------- Claude (vía Edge Function) ----------
+// ---------- Asistente IA (DeepSeek, vía Edge Function) ----------
 const ERR = {
   unauthorized: "Tu sesión venció. Cerrá sesión y volvé a entrar.",
   cuota: "Llegaste al límite de consultas de hoy. Probá mañana.",
   rate_limited: "Demasiadas consultas seguidas. Esperá un momento y volvé a intentar.",
-  refused: "Claude no pudo responder a eso. Probá describirlo de otra forma.",
+  refused: "El asistente no pudo responder a eso. Probá describirlo de otra forma.",
   invalid_json: "No pude entender la lectura. Probá con una foto más nítida.",
   image_rejected: "Esa imagen no sirve (formato o tamaño). Probá con otra.",
   forbidden: "No tenés acceso a este botiquín.",
   network: "Sin conexión. Revisá internet y probá de nuevo.",
-  upstream: "Claude no respondió. Probá de nuevo en un rato.",
-  server_config: "Falta configurar la clave de Anthropic en Supabase (ver README).",
+  upstream: "El asistente no respondió. Probá de nuevo en un rato.",
+  sin_saldo: "Se acabó el saldo de la API de DeepSeek. Hay que recargar en platform.deepseek.com.",
+  server_config: "Falta configurar la clave de DeepSeek en Supabase (ver README).",
   incomplete: "La respuesta se cortó. Probá de nuevo.",
   cancelled: "",
 };
 const errMsg = (e) => ERR[e?.code] ?? ("Hubo un problema (" + (e?.code || "error") + "). Intentá de nuevo.");
 
-async function llamarClaude(body, signal) {
+async function llamarAsistente(body, signal) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) throw { code: "unauthorized" };
   let res;
   try {
-    res = await fetch(`${SUPABASE_URL}/functions/v1/claude`, {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/asistente`, {
       method: "POST", signal,
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token, apikey: SUPABASE_ANON_KEY },
       body: JSON.stringify(body),
@@ -667,8 +721,8 @@ async function llamarClaude(body, signal) {
   return res;
 }
 
-// Achica la foto (lado mayor ~1500 px, JPEG) antes de mandarla: menos datos y dentro de los límites de la API.
-async function imagenParaClaude(file, max = 1568) {
+// Achica la foto (lado mayor ~1280 px, JPEG) antes de mandarla: menos datos y dentro de los límites de la API.
+async function imagenParaIA(file, max = 1280) {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko({ code: "image_rejected" }); i.src = url; });
@@ -710,9 +764,9 @@ $("btnRead").onclick = async () => {
   $("btnRead").disabled = true; $("btnStop1").hidden = false;
   status("readStatus", "Preparando las fotos…"); $("readStatus").classList.add("pulse");
   try {
-    const imagenes = await Promise.all(photoFiles.map((f) => imagenParaClaude(f)));
+    const imagenes = await Promise.all(photoFiles.map((f) => imagenParaIA(f)));
     status("readStatus", "Leyendo las cajas…");
-    const res = await llamarClaude({ tipo: "leer_cajas", imagenes }, ctl1.signal);
+    const res = await llamarAsistente({ tipo: "leer_cajas", imagenes }, ctl1.signal);
     const { medicamentos: arr = [] } = await res.json();
     if (!arr.length) status("readStatus", "No encontré ningún medicamento en las fotos. Probá con otra toma.");
     else status("readStatus", `Leí ${arr.length} medicamento${arr.length > 1 ? "s" : ""}. Revisá los datos y guardá.`);
@@ -743,8 +797,8 @@ $("btnAsk").onclick = async () => {
   let texto = "";
   try {
     const body = { tipo: "consulta", botiquin_id: botiquinId, sintoma };
-    if (symFile) body.imagen = await imagenParaClaude(symFile);
-    const res = await llamarClaude(body, ctl2.signal);
+    if (symFile) body.imagen = await imagenParaIA(symFile);
+    const res = await llamarAsistente(body, ctl2.signal);
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
     let buf = "", fin = null;
     for (;;) {
