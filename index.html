@@ -180,13 +180,27 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
       Entrar con Google
     </button>
     <div class="sep muted">o con tu email</div>
-    <form id="fClave" class="otp">
-      <input id="email" type="email" required autocomplete="username" placeholder="tu@gmail.com" aria-label="Email">
-      <input id="clave" type="password" required minlength="8" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña">
-      <button class="btn primary" type="submit" value="entrar">Entrar</button>
-      <button class="btn" type="submit" value="crear">Crear cuenta nueva</button>
+    <!-- Link / código por email (requiere SMTP propio: config.js → LOGIN_LINK) -->
+    <form id="fLink" class="otp" hidden>
+      <input id="emailLink" type="email" required autocomplete="email" placeholder="tu@gmail.com" aria-label="Email">
+      <button class="btn primary" type="submit">Mandarme un link para entrar</button>
     </form>
-    <button class="btn small" type="button" id="btnLink" style="justify-self:center">Olvidé mi contraseña</button>
+    <form id="fCodigo" class="otp" hidden>
+      <input id="codigo" inputmode="numeric" autocomplete="one-time-code" required maxlength="10" placeholder="Código del email" aria-label="Código del email">
+      <button class="btn primary" type="submit">Entrar con el código</button>
+      <button class="btn small" type="button" id="btnOtroEmail">Usar otro email</button>
+    </form>
+    <!-- Email + contraseña (siempre disponible; si hay link, queda plegado) -->
+    <details id="conClave" open>
+      <summary class="muted">Entrar con contraseña</summary>
+      <form id="fClave" class="otp" style="margin-top:8px">
+        <input id="email" type="email" required autocomplete="username" placeholder="tu@gmail.com" aria-label="Email">
+        <input id="clave" type="password" required minlength="8" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña">
+        <button class="btn primary" type="submit" value="entrar">Entrar</button>
+        <button class="btn" type="submit" value="crear">Crear cuenta nueva</button>
+      </form>
+      <button class="btn small" type="button" id="btnLink" style="margin-top:8px">Olvidé mi contraseña</button>
+    </details>
     <p class="status" id="loginStatus" aria-live="polite"></p>
   </div>
 </div>
@@ -389,6 +403,13 @@ if (SUPABASE_URL.includes("TU-PROYECTO")) {
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { flowType: "implicit" } });
 // El botón de Google solo aparece cuando el proveedor está activado en Supabase (config.js → LOGIN_GOOGLE).
 if (!config.LOGIN_GOOGLE) { $("btnGoogle").hidden = true; document.querySelector(".login .sep").hidden = true; }
+// El link por email solo aparece con SMTP propio configurado (config.js → LOGIN_LINK); entonces la contraseña queda plegada.
+if (config.LOGIN_LINK) {
+  $("fLink").hidden = false; $("conClave").open = false;
+  $("btnGoogle").classList.toggle("primary", true);
+} else {
+  $("conClave").querySelector("summary").hidden = true; $("btnLink").hidden = true;
+}
 
 // Invitación por enlace (?unirse=CODIGO): se guarda para usarla después de entrar.
 {
@@ -487,21 +508,45 @@ $("fClave").addEventListener("submit", async (e) => {
   else status("loginStatus", "");
 });
 
-// Alternativa sin contraseña: link por email (el plan gratis de Supabase manda pocos por hora).
+// Link + código por email. El código sirve si el email se abre en otra app o dispositivo.
+let emailOtp = "";
+async function mandarLink(email, crear) {
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: crear, emailRedirectTo: location.origin + location.pathname } });
+  if (!error) return null;
+  return /rate limit|security purposes/i.test(error.message) ? "Se mandaron muchos emails en poco tiempo. Esperá un rato o entrá con contraseña."
+    : /not found|signups not allowed/i.test(error.message) ? "No hay cuenta con ese email."
+    : "No se pudo mandar el email: " + error.message;
+}
+$("fLink").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector("button"); btn.disabled = true;
+  emailOtp = $("emailLink").value.trim().toLowerCase();
+  status("loginStatus", "Mandando el email…");
+  const err = await mandarLink(emailOtp, true);
+  btn.disabled = false;
+  if (err) { status("loginStatus", err, true); return; }
+  $("fLink").hidden = true; $("fCodigo").hidden = false; $("codigo").value = "";
+  status("loginStatus", `Te mandé un email a ${emailOtp}. Tocá el link, o escribí acá el código que trae (mirá también en spam).`);
+});
+$("fCodigo").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
+  const { error } = await sb.auth.verifyOtp({ email: emailOtp, token: $("codigo").value.replace(/\D/g, ""), type: "email" });
+  btn.disabled = false;
+  if (error) status("loginStatus", "El código no es correcto o venció. Pedí otro.", true);
+});
+$("btnOtroEmail").onclick = () => { $("fCodigo").hidden = true; $("fLink").hidden = false; status("loginStatus", ""); };
+
+// "Olvidé mi contraseña": link por email a una cuenta que ya existe.
 $("btnLink").onclick = async () => {
   const email = $("email").value.trim().toLowerCase();
   if (!email || !$("email").checkValidity()) { status("loginStatus", "Escribí tu email arriba y volvé a tocar.", true); $("email").focus(); return; }
   $("btnLink").disabled = true; status("loginStatus", "Mandando el email…");
-  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } });
+  const err = await mandarLink(email, false);
   $("btnLink").disabled = false;
-  if (error) {
-    status("loginStatus", /rate limit|security purposes/i.test(error.message)
-      ? "Se mandaron muchos emails en poco tiempo. Esperá una hora o entrá con contraseña."
-      : /not found|signups not allowed/i.test(error.message) ? "No hay cuenta con ese email. Creala con «Crear cuenta nueva»."
-      : "No se pudo mandar el email: " + error.message, true);
-    return;
-  }
-  status("loginStatus", `Te mandé un link a ${email}. Abrilo desde este dispositivo y después poné una contraseña nueva en Cuenta.`);
+  if (err) { status("loginStatus", err, true); return; }
+  emailOtp = email; $("fCodigo").hidden = false; $("fLink").hidden = true; $("codigo").value = "";
+  status("loginStatus", `Te mandé un email a ${email}. Tocá el link o escribí el código; después poné una contraseña nueva en Cuenta.`);
 };
 
 let arrancando = false;
@@ -518,7 +563,7 @@ function mostrarLogin() {
   if (canal) { sb.removeChannel(canal); canal = null; }
   $("app").hidden = true; $("tabs").hidden = true; $("btnCuenta").hidden = true;
   $("login").hidden = false; $("btnGoogle").disabled = false; status("loginStatus", "");
-  $("clave").value = "";
+  $("clave").value = ""; $("fCodigo").hidden = true; $("fLink").hidden = !config.LOGIN_LINK;
   note("");
 }
 

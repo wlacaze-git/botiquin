@@ -6,3 +6,5 @@ export const SUPABASE_ANON_KEY = "sb_publishable_DoYwXdNaL8r0KBGkh7M1tA_x6atTlFV
 
 // Poné true cuando el proveedor Google esté activado en Supabase (Authentication → Providers → Google).
 export const LOGIN_GOOGLE = false;
+// Poné true cuando haya SMTP propio configurado en Supabase (link/código por email sin el límite del plan gratis).
+export const LOGIN_LINK = false;
